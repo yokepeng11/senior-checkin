@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #e7e5df;
+    -webkit-font-smoothing: antialiased;
+    color: #1F2421;
+  }
+}
+
+/* ── Design-system animations (from Senior Check-In.dc.html) ── */
+
+@keyframes sunIn {
+  0%   { opacity: 0; transform: scale(0.6) rotate(-25deg); }
+  60%  { opacity: 1; transform: scale(1.08) rotate(4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes haloPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 0.85; transform: scale(1.12); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 18px 40px rgba(31,157,85,0.40), 0 6px 14px rgba(31,157,85,0.30),
+                inset 0 2px 5px rgba(255,255,255,0.45);
+  }
+  50% {
+    transform: scale(1.018);
+    box-shadow: 0 24px 52px rgba(31,157,85,0.46), 0 8px 18px rgba(31,157,85,0.34),
+                inset 0 2px 5px rgba(255,255,255,0.45);
+  }
+}
+
+@keyframes buttonPress {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.93); }
+  100% { transform: scale(1); }
+}
+
+.anim-sun-in    { animation: sunIn 0.9s cubic-bezier(.2,.7,.3,1.2) both; }
+.anim-halo      { animation: haloPulse 2.4s ease-in-out infinite; }
+.anim-fade-up   { animation: fadeUp 0.6s both; }
+.anim-slide-down { animation: slideDown 0.7s ease both; }
+.anim-breathe   { animation: breathe 4.5s ease-in-out infinite; }
+.anim-press     { animation: buttonPress 0.18s ease forwards; }
+
+.delay-250  { animation-delay: 0.25s; }
+.delay-400  { animation-delay: 0.40s; }
+.delay-550  { animation-delay: 0.55s; }
