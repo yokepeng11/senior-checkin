@@ -3,6 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import type { Dashboard, DashboardSenior } from '../types';
 
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0))).buffer;
+}
+
 function fmtTime(iso: string | null) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -74,6 +81,7 @@ export default function NOKDashboard() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [notifStatus, setNotifStatus] = useState<'unknown'|'granted'|'denied'|'unsupported'>('unknown');
 
   const load = async (spin = false) => {
     if (spin) setRefreshing(true);
@@ -83,6 +91,46 @@ export default function NOKDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Check current notification permission (read-only, no prompt)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setNotifStatus('unsupported'); return;
+    }
+    if (Notification.permission === 'granted') setNotifStatus('granted');
+    else if (Notification.permission === 'denied') setNotifStatus('denied');
+    else setNotifStatus('unknown');
+  }, []);
+
+  // Called on button tap — iOS requires user gesture
+  const enableNotifications = async () => {
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidKey || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Notifications are not available. Make sure the app is installed from the Home Screen.');
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      const perm = await Notification.requestPermission();
+      setNotifStatus(perm === 'granted' ? 'granted' : 'denied');
+      if (perm !== 'granted') return;
+
+      const existing = await reg.pushManager.getSubscription();
+      const sub = existing ?? await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+      const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/caregiver-subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: { endpoint, keys } }),
+      });
+    } catch (e) {
+      console.error('Caregiver push subscribe error:', e);
+    }
+  };
 
   const today = new Date().toLocaleDateString('en-SG',
     { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -147,7 +195,7 @@ export default function NOKDashboard() {
             </svg>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#8a6a16', lineHeight: 1.45 }}>
               <strong>{data!.not_checked_in} senior{data!.not_checked_in > 1 ? 's have' : ' has'} not checked in yet.</strong>{' '}
-              An SMS alert will be sent at 12:00 PM if they remain unchecked.
+              A WhatsApp alert will be sent at 12:00 PM if they remain unchecked.
             </div>
           </div>
         )}
@@ -158,6 +206,37 @@ export default function NOKDashboard() {
             fontSize: 15, fontWeight: 700, color: '#15703C',
           }}>
             ✅ All seniors have checked in today. Great!
+          </div>
+        )}
+
+        {/* Notification opt-in */}
+        {notifStatus === 'unknown' && (
+          <div style={{ background: '#fff', borderRadius: 18, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ fontSize: 28 }}>🔔</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#1F2421' }}>Get notified at 12pm</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
+                Receive a push notification if a senior hasn't checked in.
+              </div>
+            </div>
+            <button onClick={enableNotifications} style={{
+              border: 'none', borderRadius: 12, padding: '10px 16px', cursor: 'pointer',
+              background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
+              fontSize: 14, fontWeight: 900, color: '#fff', fontFamily: "'Nunito', sans-serif",
+              whiteSpace: 'nowrap',
+            }}>Enable</button>
+          </div>
+        )}
+        {notifStatus === 'granted' && (
+          <div style={{ background: '#e3f3e9', borderRadius: 18, padding: '12px 18px',
+            fontSize: 14, fontWeight: 700, color: '#15703C' }}>
+            🔔 Notifications on — you'll be alerted at 12pm if anyone misses check-in.
+          </div>
+        )}
+        {notifStatus === 'denied' && (
+          <div style={{ background: '#fdecea', borderRadius: 18, padding: '12px 18px',
+            fontSize: 14, fontWeight: 700, color: '#c0392b' }}>
+            🔕 Notifications blocked. Go to phone Settings → this app → Notifications → Allow.
           </div>
         )}
 

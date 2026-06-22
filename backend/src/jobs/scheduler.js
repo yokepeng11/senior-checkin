@@ -127,6 +127,18 @@ function scheduleSMSAlerts() {
         `Centre contact: ${process.env.CENTRE_PHONE || '+65 6511 5100'}`;
       await sendWhatsApp(phone, msg, group[0].senior_id);
     }
+
+    // Also push to all registered caregiver devices
+    const allNames = missed.map(s => s.name).join(', ');
+    const caregiverSubs = db.prepare('SELECT * FROM caregiver_push_subscriptions').all();
+    console.log(`\n🔔 Pushing alert to ${caregiverSubs.length} caregiver device(s)`);
+    for (const sub of caregiverSubs) {
+      await sendPush(sub, {
+        title: `⚠️ ${missed.length} senior${missed.length > 1 ? 's have' : ' has'} not checked in`,
+        body: `${allNames} — please follow up.`,
+        url: '/nok',
+      }, true);
+    }
   });
 }
 
@@ -191,7 +203,7 @@ function scheduleMonthlyReport() {
 }
 
 // Send push notification to a single subscription, remove it if stale
-async function sendPush(sub, payload) {
+async function sendPush(sub, payload, isCaregiver = false) {
   try {
     await webpush.sendNotification(
       { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -200,7 +212,8 @@ async function sendPush(sub, payload) {
   } catch (err) {
     // 404/410 = subscription expired — remove it
     if (err.statusCode === 404 || err.statusCode === 410) {
-      db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
+      const table = isCaregiver ? 'caregiver_push_subscriptions' : 'push_subscriptions';
+      db.prepare(`DELETE FROM ${table} WHERE endpoint = ?`).run(sub.endpoint);
     } else {
       console.error('Push send error:', err.message);
     }
