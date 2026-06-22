@@ -105,6 +105,7 @@ export default function SeniorHome() {
   const [settingsName, setSettingsName] = useState('');
   const [settingsNokName, setSettingsNokName] = useState('');
   const [settingsNokPhone, setSettingsNokPhone] = useState('');
+  const [notifStatus, setNotifStatus] = useState<'unknown'|'granted'|'denied'|'unsupported'>('unknown');
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const TIMES = ['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM',
@@ -154,42 +155,48 @@ export default function SeniorHome() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Push notification subscription ───────────────────────────────────────────
+  // ── Push notification status check (read-only, no prompt) ───────────────────
   useEffect(() => {
-    if (!id) return;
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    if (!vapidKey) return;
-
-    async function subscribePush() {
-      try {
-        // Register service worker
-        const reg = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
-
-        // Request permission (non-blocking — if denied, we skip silently)
-        const perm = await Notification.requestPermission();
-        if (perm !== 'granted') return;
-
-        // Subscribe (or reuse existing)
-        const existing = await reg.pushManager.getSubscription();
-        const sub = existing ?? await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        });
-
-        // Send to backend
-        const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-        await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/subscribe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ senior_id: id, subscription: { endpoint, keys } }),
-        });
-      } catch { /* push is best-effort */ }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setNotifStatus('unsupported'); return;
     }
+    if (Notification.permission === 'granted') setNotifStatus('granted');
+    else if (Notification.permission === 'denied') setNotifStatus('denied');
+    else setNotifStatus('unknown');
+  }, []);
 
-    subscribePush();
-  }, [id]);
+  // ── Enable notifications — called from a button tap (required by iOS) ────────
+  const enableNotifications = async () => {
+    if (!id) return;
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidKey) { alert('Notifications are not configured yet. Please try again later.'); return; }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Your device does not support push notifications.'); return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      const perm = await Notification.requestPermission();
+      setNotifStatus(perm === 'granted' ? 'granted' : 'denied');
+      if (perm !== 'granted') return;
+
+      const existing = await reg.pushManager.getSubscription();
+      const sub = existing ?? await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+
+      const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+      await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senior_id: id, subscription: { endpoint, keys } }),
+      });
+    } catch (e) {
+      console.error('Push subscribe error:', e);
+    }
+  };
 
   const handleCheckin = async () => {
     if (!id || pressing || status?.checked_in) return;
@@ -366,6 +373,52 @@ export default function SeniorHome() {
           <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>Contact number</div>
           <input style={inputSt} value={settingsNokPhone} type="tel"
             onChange={e => setSettingsNokPhone(e.target.value)} placeholder="+65 9123 4567" />
+        </div>
+
+        {/* notifications */}
+        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+          color: '#9aa09c', margin: '20px 6px 10px' }}>Notifications</div>
+        <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          {notifStatus === 'granted' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 26 }}>🔔</span>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#1F9D55' }}>Notifications are on</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
+                  You'll be reminded at your check-in time.
+                </div>
+              </div>
+            </div>
+          ) : notifStatus === 'denied' ? (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#c0392b', marginBottom: 6 }}>
+                🔕 Notifications are blocked
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', lineHeight: 1.5 }}>
+                Go to your phone's <strong>Settings → {'"'}Senior Check-In{'"'} → Notifications</strong> and turn them on, then come back here.
+              </div>
+            </div>
+          ) : notifStatus === 'unsupported' ? (
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c' }}>
+              Your device or browser does not support notifications.
+              {' '}Make sure the app is installed from the Home Screen.
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2421', marginBottom: 8 }}>
+                Get a daily reminder at your check-in time
+              </div>
+              <button onClick={enableNotifications} style={{
+                width: '100%', border: 'none', borderRadius: 14,
+                padding: '14px', cursor: 'pointer',
+                background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
+                fontSize: 16, fontWeight: 900, color: '#fff',
+                fontFamily: "'Nunito', sans-serif",
+              }}>
+                🔔 Enable Notifications
+              </button>
+            </div>
+          )}
         </div>
 
         {/* info banner */}
