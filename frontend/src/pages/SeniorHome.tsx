@@ -73,31 +73,6 @@ function IOSShell({ children, dark = false }: { children: React.ReactNode; dark?
         position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
         width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
       }} />
-      {/* Status bar */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '19px 28px 0', pointerEvents: 'none',
-      }}>
-        <span style={{ fontSize: 17, fontWeight: 600, color: dark ? '#fff' : '#000', fontFamily: '-apple-system, system-ui' }}>
-          9:41
-        </span>
-        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-          {/* signal bars */}
-          <svg width="19" height="12" viewBox="0 0 19 12">
-            <rect x="0"   y="7.5" width="3.2" height="4.5" rx="0.7" fill={dark ? '#fff' : '#000'} />
-            <rect x="4.8" y="5"   width="3.2" height="7"   rx="0.7" fill={dark ? '#fff' : '#000'} />
-            <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={dark ? '#fff' : '#000'} />
-            <rect x="14.4" y="0"  width="3.2" height="12"  rx="0.7" fill={dark ? '#fff' : '#000'} />
-          </svg>
-          {/* battery */}
-          <svg width="27" height="13" viewBox="0 0 27 13">
-            <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={dark ? '#fff' : '#000'} strokeOpacity="0.35" fill="none" />
-            <rect x="2" y="2" width="20" height="9" rx="2" fill={dark ? '#fff' : '#000'} />
-            <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={dark ? '#fff' : '#000'} fillOpacity="0.4" />
-          </svg>
-        </div>
-      </div>
       {/* home indicator */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
@@ -320,7 +295,7 @@ export default function SeniorHome() {
   };
 
   const SettingsScreen = (
-    <div style={{ height: '100%', background: '#F4F6F4', display: 'flex', flexDirection: 'column', paddingTop: 64 }}>
+    <div style={{ height: '100%', background: '#F4F6F4', display: 'flex', flexDirection: 'column', paddingTop: 48 }}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 18px 16px' }}>
         <button onClick={() => setScreen('main')} style={{
@@ -421,7 +396,7 @@ export default function SeniorHome() {
   // ── Main screen ───────────────────────────────────────────────────────────
   const MainScreen = (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
-      padding: '86px 28px 34px' }}>
+      padding: '64px 28px 34px' }}>
       {/* header */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#8a8f8b' }}>Good morning,</div>
