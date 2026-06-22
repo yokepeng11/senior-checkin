@@ -64,7 +64,14 @@ export default function SeniorSetup() {
         person_in_charge_phone: nokPhone.trim(),
         preferred_checkin_time: h24,
       });
+      // Save full profile so the app can silently recover if backend resets
       localStorage.setItem('sc_senior_id', created.senior_id);
+      localStorage.setItem('sc_senior_profile', JSON.stringify({
+        name: name.trim(),
+        nokName: nokName.trim(),
+        nokPhone: nokPhone.trim(),
+        prefTime: h24,
+      }));
       navigate(`/senior/${created.senior_id}`, { replace: true });
     } catch {
       setError('Could not save. Please check your connection and try again.');

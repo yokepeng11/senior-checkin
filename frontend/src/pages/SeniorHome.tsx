@@ -178,7 +178,23 @@ export default function SeniorHome() {
       });
       if (idx >= 0) setPrefIdx(idx);
     } catch {
-      // Stale or invalid senior_id — clear and redirect to setup
+      // Backend may have reset (free tier) — try to silently recreate from cached profile
+      const cached = localStorage.getItem('sc_senior_profile');
+      if (cached) {
+        try {
+          const p = JSON.parse(cached);
+          const created = await api.createSenior({
+            name: p.name,
+            phone_number: '',
+            person_in_charge_name: p.nokName,
+            person_in_charge_phone: p.nokPhone,
+            preferred_checkin_time: p.prefTime,
+          });
+          localStorage.setItem('sc_senior_id', created.senior_id);
+          navigate(`/senior/${created.senior_id}`, { replace: true });
+          return;
+        } catch { /* fall through to setup */ }
+      }
       localStorage.removeItem('sc_senior_id');
       navigate('/senior/setup', { replace: true });
     }
@@ -239,6 +255,13 @@ export default function SeniorHome() {
         person_in_charge_name: settingsNokName,
         person_in_charge_phone: settingsNokPhone,
       } : prev);
+      // Keep cached profile in sync so silent recovery stays up to date
+      localStorage.setItem('sc_senior_profile', JSON.stringify({
+        name: settingsName,
+        nokName: settingsNokName,
+        nokPhone: settingsNokPhone,
+        prefTime: h24,
+      }));
     } catch {}
     setScreen('main');
   };
