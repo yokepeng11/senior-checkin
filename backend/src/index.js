@@ -16,19 +16,21 @@ app.use(express.json());
 app.use('/api/seniors', require('./routes/seniors'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/push', require('./routes/push'));
 
 app.get('/api/health', (req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 );
 
 // Scheduled jobs
-const { scheduleDailyReset, scheduleSMSAlerts, scheduleWeeklyReport, scheduleMonthlyReport } =
+const { scheduleDailyReset, scheduleSMSAlerts, scheduleWeeklyReport, scheduleMonthlyReport, schedulePushReminders } =
   require('./jobs/scheduler');
 
 scheduleDailyReset();
 scheduleSMSAlerts();
 scheduleWeeklyReport();
 scheduleMonthlyReport();
+schedulePushReminders();
 
 app.listen(PORT, () => {
   console.log(`\n🏥 Senior Check-In Server running on http://localhost:${PORT}`);

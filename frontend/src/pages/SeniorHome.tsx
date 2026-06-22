@@ -80,6 +80,14 @@ function fmtDate() {
   return new Date().toLocaleDateString('en-SG', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+// Convert VAPID public key from base64url to Uint8Array (required by pushManager.subscribe)
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 type Screen = 'main' | 'confirm' | 'settings';
 
@@ -145,6 +153,43 @@ export default function SeniorHome() {
   }, [id, navigate]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // ── Push notification subscription ───────────────────────────────────────────
+  useEffect(() => {
+    if (!id) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!vapidKey) return;
+
+    async function subscribePush() {
+      try {
+        // Register service worker
+        const reg = await navigator.serviceWorker.register('/sw.js');
+        await navigator.serviceWorker.ready;
+
+        // Request permission (non-blocking — if denied, we skip silently)
+        const perm = await Notification.requestPermission();
+        if (perm !== 'granted') return;
+
+        // Subscribe (or reuse existing)
+        const existing = await reg.pushManager.getSubscription();
+        const sub = existing ?? await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
+        });
+
+        // Send to backend
+        const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+        await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/subscribe`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ senior_id: id, subscription: { endpoint, keys } }),
+        });
+      } catch { /* push is best-effort */ }
+    }
+
+    subscribePush();
+  }, [id]);
 
   const handleCheckin = async () => {
     if (!id || pressing || status?.checked_in) return;

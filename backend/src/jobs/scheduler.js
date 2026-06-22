@@ -1,6 +1,16 @@
 const cron = require('node-cron');
 const db = require('../db');
 const { randomUUID } = require('crypto');
+const webpush = require('web-push');
+
+// Configure web-push with VAPID keys (set these as env vars on Render)
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(
+    'mailto:admin@feiyue.org.sg',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
 
 function mockSendSMS(phone, message, seniorId = null) {
   // Replace this block with Twilio in production:
@@ -144,4 +154,71 @@ function scheduleMonthlyReport() {
   });
 }
 
-module.exports = { scheduleDailyReset, scheduleSMSAlerts, scheduleWeeklyReport, scheduleMonthlyReport };
+// Send push notification to a single subscription, remove it if stale
+async function sendPush(sub, payload) {
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      JSON.stringify(payload)
+    );
+  } catch (err) {
+    // 404/410 = subscription expired — remove it
+    if (err.statusCode === 404 || err.statusCode === 410) {
+      db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
+    } else {
+      console.error('Push send error:', err.message);
+    }
+  }
+}
+
+function schedulePushReminders() {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    console.log('⚠️  VAPID keys not set — push reminders disabled.');
+    return;
+  }
+
+  // Run every minute, check which seniors are due for a check-in reminder
+  cron.schedule('* * * * *', async () => {
+    // Use Singapore time (UTC+8)
+    const now = new Date();
+    const sgtOffset = 8 * 60; // minutes
+    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const sgtMinutes = (utcMinutes + sgtOffset) % (24 * 60);
+    const sgtHour = Math.floor(sgtMinutes / 60);
+    const sgtMin = sgtMinutes % 60;
+
+    // Only fire at the top of the hour (minute = 0)
+    if (sgtMin !== 0) return;
+
+    const hh = String(sgtHour).padStart(2, '0');
+    const today = new Date(now.getTime() + sgtOffset * 60000).toISOString().split('T')[0];
+
+    // Find seniors whose preferred time matches current SGT hour and haven't checked in today
+    const seniors = db.prepare(`
+      SELECT s.senior_id, s.name FROM seniors s
+      LEFT JOIN daily_status ds ON s.senior_id = ds.senior_id AND ds.date = ?
+      WHERE s.is_active = 1
+        AND substr(s.preferred_checkin_time, 1, 2) = ?
+        AND (ds.checked_in_today IS NULL OR ds.checked_in_today = 0)
+    `).all(today, hh);
+
+    if (seniors.length === 0) return;
+
+    console.log(`\n🔔 Push reminders — SGT ${hh}:00 — ${seniors.length} senior(s): ${seniors.map(s => s.name).join(', ')}`);
+
+    for (const senior of seniors) {
+      const subs = db.prepare(
+        'SELECT * FROM push_subscriptions WHERE senior_id = ?'
+      ).all(senior.senior_id);
+
+      for (const sub of subs) {
+        await sendPush(sub, {
+          title: `☀️ Good Morning, ${senior.name.split(' ')[0]}!`,
+          body: "It's time to check in. Tap to open the app and press the button.",
+        });
+      }
+    }
+  });
+}
+
+module.exports = { scheduleDailyReset, scheduleSMSAlerts, scheduleWeeklyReport, scheduleMonthlyReport, schedulePushReminders };
