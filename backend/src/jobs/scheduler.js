@@ -12,24 +12,54 @@ if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   );
 }
 
-function mockSendSMS(phone, message, seniorId = null) {
-  // Replace this block with Twilio in production:
-  // const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-  // await client.messages.create({ body: message, from: process.env.TWILIO_FROM_NUMBER, to: phone });
-  console.log(`\n📱 SMS → ${phone}`);
+// Normalise phone number to E.164 format for WhatsApp (e.g. "+6591234567")
+function normalisePhone(raw) {
+  if (!raw) return null;
+  // Strip spaces, dashes, parentheses
+  let digits = raw.replace(/[\s\-().]/g, '');
+  // If it starts with +, keep as-is; otherwise assume Singapore (+65)
+  if (!digits.startsWith('+')) digits = '+65' + digits;
+  return digits;
+}
+
+async function sendWhatsApp(phone, message, seniorId = null) {
+  const to = normalisePhone(phone);
+  if (!to) return;
+
+  // Log regardless so we can see it in Render logs
+  console.log(`\n💬 WhatsApp → ${to}`);
   console.log(`   ${message}`);
 
+  // Log to alert_log
   db.prepare(
     'INSERT INTO alert_log (alert_id, senior_id, alert_date, alert_type, sent_at, recipient, content) VALUES (?, ?, ?, ?, ?, ?, ?)'
   ).run(
     randomUUID(),
     seniorId,
     new Date().toISOString().split('T')[0],
-    'sms',
+    'whatsapp',
     new Date().toISOString(),
-    phone,
+    to,
     message
   );
+
+  // Send via Twilio WhatsApp if credentials are configured
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_WHATSAPP_FROM) {
+    console.log('   ⚠️  Twilio not configured — message logged only.');
+    return;
+  }
+
+  try {
+    const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    await twilio.messages.create({
+      body: message,
+      from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+      to: `whatsapp:${to}`,
+    });
+    console.log('   ✅ WhatsApp sent.');
+  } catch (err) {
+    console.error('   ❌ WhatsApp send failed:', err.message);
+  }
 }
 
 function mockSendEmail(email, subject, body) {
@@ -59,10 +89,10 @@ function scheduleDailyReset() {
 }
 
 function scheduleSMSAlerts() {
-  // 12:00 PM: alert NOK/PIC for seniors who have not checked in
-  cron.schedule('0 12 * * *', () => {
-    const today = new Date().toISOString().split('T')[0];
-    console.log(`\n⏰ 12pm alert check for ${today}`);
+  // 12:00 PM SGT: WhatsApp caregiver if senior hasn't checked in
+  cron.schedule('0 4 * * *', async () => {   // 04:00 UTC = 12:00 SGT
+    const today = new Date(Date.now() + 8 * 3600000).toISOString().split('T')[0];
+    console.log(`\n⏰ 12pm SGT alert check for ${today}`);
 
     const missed = db.prepare(`
       SELECT s.* FROM seniors s
@@ -77,7 +107,7 @@ function scheduleSMSAlerts() {
 
     console.log(`⚠️  ${missed.length} senior(s) have not checked in: ${missed.map(s => s.name).join(', ')}`);
 
-    // Group by contact phone to avoid duplicate SMS to same recipient
+    // Group by caregiver phone to avoid duplicate messages to the same person
     const byPhone = {};
     missed.forEach(senior => {
       const phone = senior.person_in_charge_phone || senior.next_of_kin_phone;
@@ -86,11 +116,17 @@ function scheduleSMSAlerts() {
       byPhone[phone].push(senior);
     });
 
-    Object.entries(byPhone).forEach(([phone, group]) => {
-      const names = group.map(s => `${s.name} (ID: ${s.senior_id})`).join(', ');
-      const msg = `Alert: The following seniors have not checked in by 12pm today: ${names}. Please contact them to ensure their well-being. Centre contact: ${process.env.CENTRE_PHONE || '+6565123456'}`;
-      mockSendSMS(phone, msg, group[0].senior_id);
-    });
+    for (const [phone, group] of Object.entries(byPhone)) {
+      const names = group.map(s => s.name).join(', ');
+      const picName = group[0].person_in_charge_name || 'Caregiver';
+      const msg =
+        `Hi ${picName}, this is an automated reminder from Fei Yue Community Services.\n\n` +
+        `The following senior(s) under your care have *not checked in* by 12pm today:\n` +
+        `👤 ${names}\n\n` +
+        `Please check on them to ensure their well-being.\n` +
+        `Centre contact: ${process.env.CENTRE_PHONE || '+65 6511 5100'}`;
+      await sendWhatsApp(phone, msg, group[0].senior_id);
+    }
   });
 }
 
