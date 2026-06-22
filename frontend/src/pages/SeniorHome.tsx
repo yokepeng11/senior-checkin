@@ -57,38 +57,6 @@ function SettingsIcon() {
   );
 }
 
-// ── iOS-style device shell ────────────────────────────────────────────────────
-function IOSShell({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
-  return (
-    <div style={{
-      width: 402, height: 874, borderRadius: 48, overflow: 'hidden',
-      position: 'relative',
-      background: dark ? '#000' : '#F4F6F4',
-      boxShadow: '0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
-      fontFamily: "'Nunito', sans-serif",
-      WebkitFontSmoothing: 'antialiased',
-    }}>
-      {/* Dynamic island */}
-      <div style={{
-        position: 'absolute', top: 11, left: '50%', transform: 'translateX(-50%)',
-        width: 126, height: 37, borderRadius: 24, background: '#000', zIndex: 50,
-      }} />
-      {/* home indicator */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
-        height: 34, display: 'flex', justifyContent: 'center', alignItems: 'flex-end',
-        paddingBottom: 8, pointerEvents: 'none',
-      }}>
-        <div style={{ width: 139, height: 5, borderRadius: 100,
-          background: dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.25)' }} />
-      </div>
-      {/* content */}
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function fmtTime(iso: string | null) {
@@ -254,7 +222,7 @@ export default function SeniorHome() {
   // ── Confirmation screen ───────────────────────────────────────────────────
   const ConfirmScreen = (
     <div style={{
-      position: 'absolute', inset: 0, zIndex: 40,
+      flex: 1,
       background: 'linear-gradient(180deg, #FFF7E4 0%, #EAF6EE 100%)',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', padding: 40,
@@ -295,7 +263,8 @@ export default function SeniorHome() {
   };
 
   const SettingsScreen = (
-    <div style={{ height: '100%', background: '#F4F6F4', display: 'flex', flexDirection: 'column', paddingTop: 48 }}>
+    <div style={{ flex: 1, background: '#F4F6F4', display: 'flex', flexDirection: 'column',
+      paddingTop: 'max(env(safe-area-inset-top), 52px)' }}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '8px 18px 16px' }}>
         <button onClick={() => setScreen('main')} style={{
@@ -395,8 +364,10 @@ export default function SeniorHome() {
 
   // ── Main screen ───────────────────────────────────────────────────────────
   const MainScreen = (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column',
-      padding: '64px 28px 34px' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
+      padding: 'env(safe-area-inset-top, 60px) 28px env(safe-area-inset-bottom, 28px)',
+      paddingTop: 'max(env(safe-area-inset-top), 60px)',
+      paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}>
       {/* header */}
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 22, fontWeight: 700, color: '#8a8f8b' }}>Good morning,</div>
@@ -481,26 +452,12 @@ export default function SeniorHome() {
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: '#e7e5df', display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 20, padding: '40px 20px' }}>
-
-      {/* Phone */}
-      <IOSShell>
-        <div style={{ position: 'relative', height: '100%' }}>
-          {screen === 'confirm' && ConfirmScreen}
-          {screen === 'settings' && SettingsScreen}
-          {screen === 'main' && MainScreen}
-        </div>
-      </IOSShell>
-
-      {/* Reset button below phone */}
-      {status?.checked_in && (
-        <button onClick={handleReset} style={{
-          border: 'none', background: '#d9d6cf', color: '#6b675f',
-          fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 800,
-          padding: '9px 18px', borderRadius: 999, cursor: 'pointer',
-        }}>↻ Reset to before check-in</button>
-      )}
+    <div style={{ minHeight: '100dvh', background: '#F4F6F4',
+      fontFamily: "'Nunito', sans-serif", WebkitFontSmoothing: 'antialiased',
+      display: 'flex', flexDirection: 'column' }}>
+      {screen === 'confirm' && ConfirmScreen}
+      {screen === 'settings' && SettingsScreen}
+      {screen === 'main' && MainScreen}
     </div>
   );
 }
