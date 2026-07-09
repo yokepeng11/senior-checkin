@@ -98,7 +98,7 @@ export default function SeniorHome() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
-  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.15) : base;
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.28) : Math.round(base * 1.1);
 
   const [senior, setSenior] = useState<Senior | null>(null);
   const [status, setStatus] = useState<DailyStatus | null>(null);
@@ -331,15 +331,15 @@ export default function SeniorHome() {
         </div>
       </div>
 
-      <div className="anim-fade-up delay-250" style={{ fontSize: 32, fontWeight: 900, color: '#15703C', marginTop: 30 }}>
+      <div className="anim-fade-up delay-250" style={{ fontSize: zf(32), fontWeight: 900, color: '#15703C', marginTop: 30 }}>
         {t(lang, 'checkinSuccess')}
       </div>
-      <div className="anim-fade-up delay-400" style={{ fontSize: 21, fontWeight: 700, color: '#6b8a76', marginTop: 8 }}>
+      <div className="anim-fade-up delay-400" style={{ fontSize: zf(21), fontWeight: 700, color: '#6b8a76', marginTop: 8 }}>
         {t(lang, 'greatDay')}
       </div>
       <div className="anim-fade-up delay-550" style={{
         position: 'absolute', bottom: 64,
-        fontSize: 17, fontWeight: 700, color: '#a7b0a9',
+        fontSize: zf(17), fontWeight: 700, color: '#a7b0a9',
       }}>
         {t(lang, 'checkedInAt')} {checkInTime}
       </div>
@@ -350,7 +350,7 @@ export default function SeniorHome() {
   const inputSt: React.CSSProperties = {
     width: '100%', border: 'none', outline: 'none',
     background: '#f5f4f0', borderRadius: 12, padding: '11px 14px',
-    fontSize: 16, fontWeight: 700, color: '#1F2421',
+    fontSize: zf(16), fontWeight: 700, color: '#1F2421',
     fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box',
   };
 
@@ -373,25 +373,25 @@ export default function SeniorHome() {
 
       <div style={{ flex: 1, overflow: 'auto', padding: '6px 18px 24px' }}>
         {/* your details */}
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
           color: '#9aa09c', margin: '8px 6px 10px' }}>{t(lang, 'yourDetailsSetting')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'yourName')}</div>
+          <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'yourName')}</div>
           <input style={inputSt} value={settingsName} onChange={e => setSettingsName(e.target.value)} placeholder={t(lang, 'yourName')} />
         </div>
 
         {/* time section */}
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
           color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'dailyReminder')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 12 }}>{t(lang, 'preferredCheckinTime')}</div>
+          <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 12 }}>{t(lang, 'preferredCheckinTime')}</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <button onClick={() => setPrefIdx(i => Math.max(i - 1, 0))} style={{
               width: 52, height: 52, borderRadius: '50%', border: 'none', cursor: 'pointer',
               background: '#eef1ee', color: '#1F9D55', fontSize: 30, fontWeight: 800,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>−</button>
-            <div style={{ flex: 1, textAlign: 'center', fontSize: 28, fontWeight: 900,
+            <div style={{ flex: 1, textAlign: 'center', fontSize: zf(28), fontWeight: 900,
               color: '#1F9D55', letterSpacing: '-0.5px' }}>
               {TIMES[prefIdx]}
             </div>
@@ -404,19 +404,19 @@ export default function SeniorHome() {
         </div>
 
         {/* caregiver */}
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
           color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'caregiverNok')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'caregiverName')}</div>
+          <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'caregiverName')}</div>
           <input style={{ ...inputSt, marginBottom: 14 }} value={settingsNokName}
             onChange={e => setSettingsNokName(e.target.value)} placeholder={t(lang, 'caregiverName')} />
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'contactNumber')}</div>
+          <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'contactNumber')}</div>
           <input style={inputSt} value={settingsNokPhone} type="tel"
             onChange={e => setSettingsNokPhone(e.target.value)} placeholder="+65 9123 4567" />
         </div>
 
         {/* notifications */}
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
           color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'notifications')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           {notifStatus === 'granted' ? (
@@ -424,8 +424,8 @@ export default function SeniorHome() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <span style={{ fontSize: 26 }}>🔔</span>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'notifOn')}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
+                  <div style={{ fontSize: zf(16), fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'notifOn')}</div>
+                  <div style={{ fontSize: zf(13), fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
                     {t(lang, 'notifOnSub')}
                   </div>
                 </div>
@@ -434,7 +434,7 @@ export default function SeniorHome() {
                 width: '100%', border: 'none', borderRadius: 12, padding: '12px',
                 background: notifLoading ? '#f5f4f0' : '#fdecea',
                 cursor: notifLoading ? 'not-allowed' : 'pointer',
-                fontSize: 15, fontWeight: 800, color: '#c0392b',
+                fontSize: zf(15), fontWeight: 800, color: '#c0392b',
                 fontFamily: "'Nunito', sans-serif",
               }}>
                 {notifLoading ? t(lang, 'turningOff') : t(lang, 'turnOff')}
@@ -442,27 +442,27 @@ export default function SeniorHome() {
             </div>
           ) : notifStatus === 'denied' ? (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#c0392b', marginBottom: 6 }}>
+              <div style={{ fontSize: zf(15), fontWeight: 700, color: '#c0392b', marginBottom: 6 }}>
                 {t(lang, 'notifBlocked')}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', lineHeight: 1.5 }}>
+              <div style={{ fontSize: zf(13), fontWeight: 600, color: '#9aa09c', lineHeight: 1.5 }}>
                 {t(lang, 'notifBlockedSub')}
               </div>
             </div>
           ) : notifStatus === 'unsupported' ? (
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c' }}>
+            <div style={{ fontSize: zf(14), fontWeight: 600, color: '#9aa09c' }}>
               {t(lang, 'notifUnsupported')}
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2421', marginBottom: 8 }}>
+              <div style={{ fontSize: zf(15), fontWeight: 700, color: '#1F2421', marginBottom: 8 }}>
                 {t(lang, 'notifUnknownTitle')}
               </div>
               <button onClick={enableNotifications} style={{
                 width: '100%', border: 'none', borderRadius: 14,
                 padding: '14px', cursor: 'pointer',
                 background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
-                fontSize: 16, fontWeight: 900, color: '#fff',
+                fontSize: zf(16), fontWeight: 900, color: '#fff',
                 fontFamily: "'Nunito', sans-serif",
               }}>
                 {t(lang, 'turnOn')}
@@ -472,14 +472,14 @@ export default function SeniorHome() {
         </div>
 
         {/* language */}
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
           color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'language')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', gap: 10 }}>
             {(['en', 'zh'] as const).map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
                 flex: 1, border: 'none', borderRadius: 14, padding: '14px',
-                cursor: 'pointer', fontSize: 18, fontWeight: 800,
+                cursor: 'pointer', fontSize: zf(18), fontWeight: 800,
                 fontFamily: "'Nunito', sans-serif",
                 background: lang === l ? 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)' : '#f5f4f0',
                 color: lang === l ? '#fff' : '#5a605b',
@@ -499,7 +499,7 @@ export default function SeniorHome() {
             <rect x="11" y="6.5" width="2" height="8" rx="1" fill="#fff"/>
             <circle cx="12" cy="17" r="1.4" fill="#fff"/>
           </svg>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#8a6a16', lineHeight: 1.45 }}>
+          <div style={{ fontSize: zf(14), fontWeight: 600, color: '#8a6a16', lineHeight: 1.45 }}>
             {t(lang, 'alertBanner')}
           </div>
         </div>
@@ -509,7 +509,7 @@ export default function SeniorHome() {
           marginTop: 20, width: '100%',
           background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
           border: 'none', borderRadius: 18, padding: '16px', cursor: 'pointer',
-          fontSize: 18, fontWeight: 900, color: '#fff',
+          fontSize: zf(18), fontWeight: 900, color: '#fff',
         }}>
           {t(lang, 'saveSettings')}
         </button>
@@ -521,7 +521,7 @@ export default function SeniorHome() {
           navigate('/');
         }} style={{
           marginTop: 12, width: '100%', background: 'none', border: 'none',
-          cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#b5b0a8',
+          cursor: 'pointer', fontSize: zf(14), fontWeight: 700, color: '#b5b0a8',
           fontFamily: "'Nunito', sans-serif",
         }}>
           {t(lang, 'changeRole')}
@@ -588,7 +588,7 @@ export default function SeniorHome() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 9,
             background: '#e3f3e9', color: '#15703C',
-            padding: '13px 18px', borderRadius: 16, fontSize: 16, fontWeight: 800, flex: 1,
+            padding: '13px 18px', borderRadius: 16, fontSize: zf(16), fontWeight: 800, flex: 1,
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="11" fill="#1F9D55"/>

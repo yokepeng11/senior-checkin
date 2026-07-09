@@ -35,7 +35,7 @@ const inputStyle: React.CSSProperties = {
 export default function SeniorSetup() {
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
-  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.15) : base;
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.28) : Math.round(base * 1.1);
   const [name, setName] = useState('');
   const [nokName, setNokName] = useState('');
   const [nokPhone, setNokPhone] = useState('');

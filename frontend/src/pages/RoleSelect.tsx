@@ -25,7 +25,7 @@ export default function RoleSelect() {
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
   // Scale font sizes up slightly for Chinese characters
-  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.15) : base;
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.28) : Math.round(base * 1.1);
 
   return (
     <div style={{
