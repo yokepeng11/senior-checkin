@@ -81,6 +81,10 @@ export const api = {
     return r.json();
   },
 
+  async subscribePush(senior_id: string, keys: { endpoint: string; keys: { p256dh: string; auth: string } }) {
+    return post('/push/subscribe', { senior_id, subscription: keys });
+  },
+
   async checkin(senior_id: string): Promise<{ status: string; message: string; confirmed_at: string; queued?: boolean }> {
     if (!navigator.onLine) {
       const queue = getQueue();

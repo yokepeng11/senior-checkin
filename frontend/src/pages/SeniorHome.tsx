@@ -155,15 +155,38 @@ export default function SeniorHome() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Push notification status check (read-only, no prompt) ───────────────────
+  // ── Push notification status check + auto re-subscribe if already granted ────
   useEffect(() => {
+    if (!id) return;
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setNotifStatus('unsupported'); return;
     }
-    if (Notification.permission === 'granted') setNotifStatus('granted');
-    else if (Notification.permission === 'denied') setNotifStatus('denied');
-    else setNotifStatus('unknown');
-  }, []);
+    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+
+    if (Notification.permission === 'granted') {
+      setNotifStatus('granted');
+      // Auto re-subscribe silently — handles Render DB resets where senior_id changes
+      if (vapidKey) {
+        (async () => {
+          try {
+            const reg = await navigator.serviceWorker.register('/sw.js');
+            await navigator.serviceWorker.ready;
+            const existing = await reg.pushManager.getSubscription();
+            const sub = existing ?? await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(vapidKey),
+            });
+            const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
+            await api.subscribePush(id, { endpoint, keys: keys as { p256dh: string; auth: string } });
+          } catch { /* best effort */ }
+        })();
+      }
+    } else if (Notification.permission === 'denied') {
+      setNotifStatus('denied');
+    } else {
+      setNotifStatus('unknown');
+    }
+  }, [id]);
 
   // ── Enable notifications — called from a button tap (required by iOS) ────────
   const enableNotifications = async () => {
@@ -188,11 +211,7 @@ export default function SeniorHome() {
       });
 
       const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/subscribe`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senior_id: id, subscription: { endpoint, keys } }),
-      });
+      await api.subscribePush(id, { endpoint, keys: keys as { p256dh: string; auth: string } });
     } catch (e) {
       console.error('Push subscribe error:', e);
     }
