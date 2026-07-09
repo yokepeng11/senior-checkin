@@ -17,6 +17,7 @@ app.use('/api/seniors', require('./routes/seniors'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/push', require('./routes/push'));
+app.use('/api/debug', require('./routes/debug'));
 
 app.get('/api/health', (req, res) =>
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
