@@ -83,6 +83,7 @@ export default function NOKDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown'|'asking-phone'|'granted'|'denied'|'unsupported'>('unknown');
   const [caregiverPhone, setCaregiverPhone] = useState('');
+  const [editMode, setEditMode] = useState(false);
 
   const load = async (spin = false) => {
     if (spin) setRefreshing(true);
@@ -92,6 +93,18 @@ export default function NOKDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const removeSenior = async (senior_id: string, name: string) => {
+    if (!confirm(`Remove ${name} from the dashboard?`)) return;
+    try {
+      await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/seniors/${senior_id}`, { method: 'DELETE' });
+      setData(prev => prev ? {
+        ...prev,
+        seniors: prev.seniors.filter(s => s.senior_id !== senior_id),
+        total_seniors: prev.total_seniors - 1,
+      } : prev);
+    } catch { alert('Could not remove senior. Please try again.'); }
+  };
 
   // Check current notification permission (read-only, no prompt)
   useEffect(() => {
@@ -157,13 +170,23 @@ export default function NOKDashboard() {
             <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>Caregiver Dashboard</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>{today}</div>
           </div>
-          <button onClick={() => load(true)} style={{
-            marginTop: 36, width: 44, height: 44, borderRadius: '50%',
-            background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
-            cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{ display: 'inline-block', animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>↻</span>
-          </button>
+          <div style={{ display: 'flex', gap: 8, marginTop: 36 }}>
+            <button onClick={() => setEditMode(e => !e)} style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: editMode ? 'rgba(220,50,50,0.5)' : 'rgba(255,255,255,0.18)',
+              border: 'none', color: '#fff', cursor: 'pointer',
+              fontSize: 15, fontWeight: 900, fontFamily: "'Nunito', sans-serif",
+            }}>
+              {editMode ? '✕' : '✏️'}
+            </button>
+            <button onClick={() => load(true)} style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
+              cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ display: 'inline-block', animation: refreshing ? 'spin 1s linear infinite' : 'none' }}>↻</span>
+            </button>
+          </div>
         </div>
 
         {/* stats row */}
@@ -273,13 +296,31 @@ export default function NOKDashboard() {
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.8px', textTransform: 'uppercase',
           color: '#9aa09c', padding: '4px 4px 0' }}>Seniors</div>
 
+        {editMode && (
+          <div style={{ background: '#fdecea', borderRadius: 14, padding: '10px 16px',
+            fontSize: 14, fontWeight: 700, color: '#c0392b' }}>
+            Tap ✕ on a senior to remove them from the dashboard.
+          </div>
+        )}
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: '#9aa09c', fontSize: 16, fontWeight: 600 }}>
             Loading…
           </div>
         ) : (
           data?.seniors.map(s => (
-            <SeniorCard key={s.senior_id} s={s} onClick={() => navigate(`/nok/senior/${s.senior_id}`)} />
+            <div key={s.senior_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <SeniorCard s={s} onClick={() => !editMode && navigate(`/nok/senior/${s.senior_id}`)} />
+              </div>
+              {editMode && (
+                <button onClick={() => removeSenior(s.senior_id, s.name)} style={{
+                  width: 44, height: 44, borderRadius: '50%', border: 'none',
+                  background: '#e74c3c', color: '#fff', cursor: 'pointer',
+                  fontSize: 20, fontWeight: 900, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>✕</button>
+              )}
+            </div>
           ))
         )}
       </div>
