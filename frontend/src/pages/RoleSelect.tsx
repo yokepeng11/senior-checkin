@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import { useLang } from '../LangContext';
+import { t } from '../i18n';
 
 // Sun SVG — from design
 function SunIcon({ size = 58, color = '#1F9D55' }: { size?: number; color?: string }) {
@@ -21,6 +23,7 @@ function SunIcon({ size = 58, color = '#1F9D55' }: { size?: number; color?: stri
 
 export default function RoleSelect() {
   const navigate = useNavigate();
+  const { lang, setLang } = useLang();
 
   return (
     <div style={{
@@ -34,6 +37,27 @@ export default function RoleSelect() {
     }}>
       <div style={{ width: '100%', maxWidth: 420 }}>
 
+        {/* Language toggle — top right */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <div style={{
+            display: 'flex', background: '#fff', borderRadius: 12,
+            padding: 4, gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          }}>
+            {(['en', 'zh'] as const).map(l => (
+              <button key={l} onClick={() => setLang(l)} style={{
+                border: 'none', cursor: 'pointer', borderRadius: 9,
+                padding: '6px 14px', fontSize: 14, fontWeight: 800,
+                fontFamily: "'Nunito', sans-serif",
+                background: lang === l ? '#1F9D55' : 'transparent',
+                color: lang === l ? '#fff' : '#8a857c',
+                transition: 'background 0.18s, color 0.18s',
+              }}>
+                {l === 'en' ? 'EN' : '中文'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -44,10 +68,10 @@ export default function RoleSelect() {
             <SunIcon size={44} color="#fff" />
           </div>
           <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: '-0.8px', color: '#1F2421' }}>
-            Daily Check-In
+            {t(lang, 'appTitle')}
           </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
-            Fei Yue Eldercare Services
+            {t(lang, 'orgName')}
           </div>
         </div>
 
@@ -75,9 +99,9 @@ export default function RoleSelect() {
             <SunIcon size={36} color="#fff" />
           </div>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421' }}>I am a Senior</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421' }}>{t(lang, 'iAmSenior')}</div>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#8a857c', marginTop: 3 }}>
-              Tap to do my daily check-in
+              {t(lang, 'seniorSubtitle')}
             </div>
           </div>
         </button>
@@ -105,15 +129,15 @@ export default function RoleSelect() {
             👨‍👩‍👧
           </div>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421' }}>I am a Caregiver</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421' }}>{t(lang, 'iAmCaregiver')}</div>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#8a857c', marginTop: 3 }}>
-              View check-in status &amp; reports
+              {t(lang, 'caregiverSubtitle')}
             </div>
           </div>
         </button>
 
         <div style={{ textAlign: 'center', marginTop: 32, fontSize: 13, fontWeight: 600, color: '#b5b0a8' }}>
-          v1.0.0 · Fei Yue Community Services
+          {t(lang, 'version')}
         </div>
       </div>
     </div>

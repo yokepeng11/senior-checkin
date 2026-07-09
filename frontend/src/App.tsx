@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { LangProvider } from './LangContext';
 import RoleSelect from './pages/RoleSelect';
 import SeniorSetup from './pages/SeniorSetup';
 import SeniorHome from './pages/SeniorHome';
@@ -21,6 +22,7 @@ function SmartRoot() {
 export default function App() {
   return (
     <BrowserRouter>
+    <LangProvider>
       <Routes>
         <Route path="/" element={<SmartRoot />} />
         <Route path="/senior/setup" element={<SeniorSetup />} />
@@ -29,6 +31,7 @@ export default function App() {
         <Route path="/nok/senior/:id" element={<SeniorDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+    </LangProvider>
     </BrowserRouter>
   );
 }

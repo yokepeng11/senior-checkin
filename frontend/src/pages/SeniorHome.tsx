@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import type { Senior, DailyStatus } from '../types';
+import { useLang } from '../LangContext';
+import { t } from '../i18n';
 
 // ── SVG sun (white rays, for the button) ──────────────────────────────────────
 function SunWhite({ size = 58 }: { size?: number }) {
@@ -76,8 +78,9 @@ function fmtNow() {
   return `${h}:${String(m).padStart(2, '0')} ${ap}`;
 }
 
-function fmtDate() {
-  return new Date().toLocaleDateString('en-SG', { weekday: 'long', month: 'long', day: 'numeric' });
+function fmtDate(lang: string) {
+  const locale = lang === 'zh' ? 'zh-SG' : 'en-SG';
+  return new Date().toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 // Convert VAPID public key from base64url to Uint8Array (required by pushManager.subscribe)
@@ -94,6 +97,7 @@ type Screen = 'main' | 'confirm' | 'settings';
 export default function SeniorHome() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { lang, setLang } = useLang();
 
   const [senior, setSenior] = useState<Senior | null>(null);
   const [status, setStatus] = useState<DailyStatus | null>(null);
@@ -208,9 +212,9 @@ export default function SeniorHome() {
   const enableNotifications = async () => {
     if (!id) return;
     const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    if (!vapidKey) { alert('Notifications are not configured yet. Please try again later.'); return; }
+    if (!vapidKey) { alert(lang === 'zh' ? '通知尚未配置，请稍后重试。' : 'Notifications are not configured yet. Please try again later.'); return; }
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      alert('Your device does not support push notifications.'); return;
+      alert(lang === 'zh' ? '您的设备不支持推送通知。' : 'Your device does not support push notifications.'); return;
     }
     try {
       const reg = await navigator.serviceWorker.register('/sw.js');
@@ -249,7 +253,7 @@ export default function SeniorHome() {
         setStatus({ checked_in: true, last_checkin_time: result.confirmed_at, date: new Date().toISOString().split('T')[0] });
       }, 3200);
     } catch {
-      alert('Could not record check-in. Please try again.');
+      alert(lang === 'zh' ? '无法记录报到，请重试。' : 'Could not record check-in. Please try again.');
     }
   };
 
@@ -327,16 +331,16 @@ export default function SeniorHome() {
       </div>
 
       <div className="anim-fade-up delay-250" style={{ fontSize: 32, fontWeight: 900, color: '#15703C', marginTop: 30 }}>
-        Check-in Successful!
+        {t(lang, 'checkinSuccess')}
       </div>
       <div className="anim-fade-up delay-400" style={{ fontSize: 21, fontWeight: 700, color: '#6b8a76', marginTop: 8 }}>
-        Have a great day!
+        {t(lang, 'greatDay')}
       </div>
       <div className="anim-fade-up delay-550" style={{
         position: 'absolute', bottom: 64,
         fontSize: 17, fontWeight: 700, color: '#a7b0a9',
       }}>
-        Checked in at {checkInTime}
+        {t(lang, 'checkedInAt')} {checkInTime}
       </div>
     </div>
   );
@@ -363,23 +367,23 @@ export default function SeniorHome() {
             <path d="M11 2L2 11l9 9" stroke="#1F9D55" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <div style={{ fontSize: 24, fontWeight: 900, marginLeft: 16 }}>Settings</div>
+        <div style={{ fontSize: 24, fontWeight: 900, marginLeft: 16 }}>{t(lang, 'settings')}</div>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '6px 18px 24px' }}>
         {/* your details */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
-          color: '#9aa09c', margin: '8px 6px 10px' }}>Your details</div>
+          color: '#9aa09c', margin: '8px 6px 10px' }}>{t(lang, 'yourDetailsSetting')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>Your name</div>
-          <input style={inputSt} value={settingsName} onChange={e => setSettingsName(e.target.value)} placeholder="Your name" />
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'yourName')}</div>
+          <input style={inputSt} value={settingsName} onChange={e => setSettingsName(e.target.value)} placeholder={t(lang, 'yourName')} />
         </div>
 
         {/* time section */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
-          color: '#9aa09c', margin: '20px 6px 10px' }}>Daily reminder</div>
+          color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'dailyReminder')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 12 }}>Preferred check-in time</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 12 }}>{t(lang, 'preferredCheckinTime')}</div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <button onClick={() => setPrefIdx(i => Math.max(i - 1, 0))} style={{
               width: 52, height: 52, borderRadius: '50%', border: 'none', cursor: 'pointer',
@@ -400,28 +404,28 @@ export default function SeniorHome() {
 
         {/* caregiver */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
-          color: '#9aa09c', margin: '20px 6px 10px' }}>Caregiver / next of kin</div>
+          color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'caregiverNok')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>Name</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'caregiverName')}</div>
           <input style={{ ...inputSt, marginBottom: 14 }} value={settingsNokName}
-            onChange={e => setSettingsNokName(e.target.value)} placeholder="Caregiver name" />
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>Contact number</div>
+            onChange={e => setSettingsNokName(e.target.value)} placeholder={t(lang, 'caregiverName')} />
+          <div style={{ fontSize: 14, fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'contactNumber')}</div>
           <input style={inputSt} value={settingsNokPhone} type="tel"
             onChange={e => setSettingsNokPhone(e.target.value)} placeholder="+65 9123 4567" />
         </div>
 
         {/* notifications */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
-          color: '#9aa09c', margin: '20px 6px 10px' }}>Notifications</div>
+          color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'notifications')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           {notifStatus === 'granted' ? (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <span style={{ fontSize: 26 }}>🔔</span>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#1F9D55' }}>Notifications are on</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'notifOn')}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
-                    You'll be reminded at your check-in time every day.
+                    {t(lang, 'notifOnSub')}
                   </div>
                 </div>
               </div>
@@ -432,27 +436,26 @@ export default function SeniorHome() {
                 fontSize: 15, fontWeight: 800, color: '#c0392b',
                 fontFamily: "'Nunito', sans-serif",
               }}>
-                {notifLoading ? 'Turning off…' : '🔕 Turn Off Notifications'}
+                {notifLoading ? t(lang, 'turningOff') : t(lang, 'turnOff')}
               </button>
             </div>
           ) : notifStatus === 'denied' ? (
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#c0392b', marginBottom: 6 }}>
-                🔕 Notifications are blocked
+                {t(lang, 'notifBlocked')}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', lineHeight: 1.5 }}>
-                Go to your phone's <strong>Settings → {'"'}Senior Check-In{'"'} → Notifications</strong> and turn them on, then come back here.
+                {t(lang, 'notifBlockedSub')}
               </div>
             </div>
           ) : notifStatus === 'unsupported' ? (
             <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c' }}>
-              Your device or browser does not support notifications.
-              {' '}Make sure the app is installed from the Home Screen.
+              {t(lang, 'notifUnsupported')}
             </div>
           ) : (
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#1F2421', marginBottom: 8 }}>
-                Get a daily reminder at your check-in time
+                {t(lang, 'notifUnknownTitle')}
               </div>
               <button onClick={enableNotifications} style={{
                 width: '100%', border: 'none', borderRadius: 14,
@@ -461,10 +464,30 @@ export default function SeniorHome() {
                 fontSize: 16, fontWeight: 900, color: '#fff',
                 fontFamily: "'Nunito', sans-serif",
               }}>
-                🔔 Turn On Notifications
+                {t(lang, 'turnOn')}
               </button>
             </div>
           )}
+        </div>
+
+        {/* language */}
+        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+          color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'language')}</div>
+        <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {(['en', 'zh'] as const).map(l => (
+              <button key={l} onClick={() => setLang(l)} style={{
+                flex: 1, border: 'none', borderRadius: 14, padding: '13px',
+                cursor: 'pointer', fontSize: 16, fontWeight: 800,
+                fontFamily: "'Nunito', sans-serif",
+                background: lang === l ? 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)' : '#f5f4f0',
+                color: lang === l ? '#fff' : '#5a605b',
+                transition: 'background 0.18s, color 0.18s',
+              }}>
+                {l === 'en' ? t(lang, 'langEn') : t(lang, 'langZh')}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* info banner */}
@@ -476,7 +499,7 @@ export default function SeniorHome() {
             <circle cx="12" cy="17" r="1.4" fill="#fff"/>
           </svg>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#8a6a16', lineHeight: 1.45 }}>
-            If you haven't checked in by 12:00 PM, we'll text your caregiver automatically.
+            {t(lang, 'alertBanner')}
           </div>
         </div>
 
@@ -487,7 +510,7 @@ export default function SeniorHome() {
           border: 'none', borderRadius: 18, padding: '16px', cursor: 'pointer',
           fontSize: 18, fontWeight: 900, color: '#fff',
         }}>
-          Save Settings
+          {t(lang, 'saveSettings')}
         </button>
 
         {/* change role */}
@@ -500,7 +523,7 @@ export default function SeniorHome() {
           cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#b5b0a8',
           fontFamily: "'Nunito', sans-serif",
         }}>
-          Change role / Switch device
+          {t(lang, 'changeRole')}
         </button>
       </div>
     </div>
@@ -514,9 +537,9 @@ export default function SeniorHome() {
       paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}>
       {/* header */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#8a8f8b' }}>Good morning,</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: '#8a8f8b' }}>{t(lang, 'goodMorning')}</div>
         <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2 }}>{firstName}</div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#aeb2ae', marginTop: 12 }}>{fmtDate()}</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#aeb2ae', marginTop: 12 }}>{fmtDate(lang)}</div>
       </div>
 
       {/* button or already-checked */}
@@ -524,16 +547,16 @@ export default function SeniorHome() {
         {status?.checked_in ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>☀️</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#1F9D55' }}>All done for today!</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'allDone')}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: '#aeb2ae', marginTop: 8 }}>
-              Checked in at {fmtTime(status.last_checkin_time)}
+              {t(lang, 'checkedInAt')} {fmtTime(status.last_checkin_time)}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#c4c8c3', marginTop: 4 }}>See you tomorrow! 😊</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#c4c8c3', marginTop: 4 }}>{t(lang, 'seeTomorrow')}</div>
           </div>
         ) : (
           <>
             <div style={{ fontSize: 17, fontWeight: 700, color: '#aeb2ae', textAlign: 'center', letterSpacing: '0.1px' }}>
-              Tap the button below to check in
+              {t(lang, 'tapToCheckin')}
             </div>
             <button
               onClick={handleCheckin}
@@ -549,9 +572,9 @@ export default function SeniorHome() {
               aria-label="Tap to check in for today"
             >
               <SunWhite size={52} />
-              <span style={{ fontSize: 27, fontWeight: 900, letterSpacing: '0.2px' }}>Good Morning</span>
+              <span style={{ fontSize: 27, fontWeight: 900, letterSpacing: '0.2px' }}>{t(lang, 'buttonLabel')}</span>
               <span style={{ fontSize: 15, fontWeight: 700, opacity: 0.85, letterSpacing: '0.3px' }}>
-                Tap to check in ✓
+                {t(lang, 'buttonSub')}
               </span>
             </button>
           </>
@@ -570,7 +593,7 @@ export default function SeniorHome() {
               <circle cx="12" cy="12" r="11" fill="#1F9D55"/>
               <path d="M7 12.5l3.2 3.3L17 8.5" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Checked in at {fmtTime(status.last_checkin_time)}
+            {t(lang, 'checkedInAt')} {fmtTime(status.last_checkin_time)}
           </div>
         ) : (
           <div style={{
@@ -579,7 +602,7 @@ export default function SeniorHome() {
             padding: '13px 18px', borderRadius: 16, fontSize: 16, fontWeight: 800, flex: 1,
           }}>
             <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#c4c8c3', display: 'inline-block' }} />
-            Not yet checked in today
+            {t(lang, 'notYet')}
           </div>
         )}
 

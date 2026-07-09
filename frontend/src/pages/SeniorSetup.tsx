@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { useLang } from '../LangContext';
+import { t } from '../i18n';
 
 function SunIcon() {
   return (
@@ -32,6 +34,7 @@ const inputStyle: React.CSSProperties = {
 
 export default function SeniorSetup() {
   const navigate = useNavigate();
+  const { lang, setLang } = useLang();
   const [name, setName] = useState('');
   const [nokName, setNokName] = useState('');
   const [nokPhone, setNokPhone] = useState('');
@@ -40,9 +43,9 @@ export default function SeniorSetup() {
   const [error, setError] = useState('');
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Please enter your name.'); return; }
-    if (!nokName.trim()) { setError("Please enter your caregiver's name."); return; }
-    if (!nokPhone.trim()) { setError("Please enter your caregiver's contact number."); return; }
+    if (!name.trim()) { setError(t(lang, 'errName')); return; }
+    if (!nokName.trim()) { setError(t(lang, 'errNokName')); return; }
+    if (!nokPhone.trim()) { setError(t(lang, 'errNokPhone')); return; }
 
     setSaving(true);
     setError('');
@@ -74,7 +77,7 @@ export default function SeniorSetup() {
       }));
       navigate(`/senior/${created.senior_id}`, { replace: true });
     } catch {
-      setError('Could not save. Please check your connection and try again.');
+      setError(t(lang, 'errSave'));
       setSaving(false);
     }
   };
@@ -88,6 +91,27 @@ export default function SeniorSetup() {
     }}>
       <div style={{ width: '100%', maxWidth: 420 }}>
 
+        {/* Language toggle */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+          <div style={{
+            display: 'flex', background: '#fff', borderRadius: 12,
+            padding: 4, gap: 4, boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          }}>
+            {(['en', 'zh'] as const).map(l => (
+              <button key={l} onClick={() => setLang(l)} style={{
+                border: 'none', cursor: 'pointer', borderRadius: 9,
+                padding: '6px 14px', fontSize: 14, fontWeight: 800,
+                fontFamily: "'Nunito', sans-serif",
+                background: lang === l ? '#1F9D55' : 'transparent',
+                color: lang === l ? '#fff' : '#8a857c',
+                transition: 'background 0.18s, color 0.18s',
+              }}>
+                {l === 'en' ? 'EN' : '中文'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div style={{
@@ -100,26 +124,26 @@ export default function SeniorSetup() {
             <SunIcon />
           </div>
           <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.5px' }}>
-            Welcome!
+            {t(lang, 'welcome')}
           </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
-            Let's set up your profile to get started.
+            {t(lang, 'welcomeSub')}
           </div>
         </div>
 
         {/* Your details */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.7px',
           textTransform: 'uppercase', color: '#9aa09c', margin: '0 4px 10px' }}>
-          Your details
+          {t(lang, 'yourDetails')}
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
           padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
-            Your name
+            {t(lang, 'yourName')}
           </div>
           <input
             style={inputStyle}
-            placeholder="e.g. Mary Tan"
+            placeholder={t(lang, 'namePlaceholder')}
             value={name}
             onChange={e => setName(e.target.value)}
           />
@@ -128,12 +152,12 @@ export default function SeniorSetup() {
         {/* Preferred check-in time */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.7px',
           textTransform: 'uppercase', color: '#9aa09c', margin: '0 4px 10px' }}>
-          Daily check-in time
+          {t(lang, 'dailyCheckinTime')}
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
           padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 16 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 14 }}>
-            Preferred check-in time
+            {t(lang, 'preferredCheckinTime')}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
             <button onClick={() => setPrefIdx(i => Math.max(i - 1, 0))} style={{
@@ -156,25 +180,25 @@ export default function SeniorSetup() {
         {/* Caregiver/NOK */}
         <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.7px',
           textTransform: 'uppercase', color: '#9aa09c', margin: '0 4px 10px' }}>
-          Caregiver / next of kin
+          {t(lang, 'caregiverNok')}
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
           padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 24 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
-            Caregiver name
+            {t(lang, 'caregiverName')}
           </div>
           <input
             style={{ ...inputStyle, marginBottom: 14 }}
-            placeholder="e.g. Sarah Tan"
+            placeholder={t(lang, 'caregiverNamePlaceholder')}
             value={nokName}
             onChange={e => setNokName(e.target.value)}
           />
           <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
-            Contact number
+            {t(lang, 'contactNumber')}
           </div>
           <input
             style={inputStyle}
-            placeholder="e.g. +65 9123 4567"
+            placeholder={t(lang, 'contactPlaceholder')}
             value={nokPhone}
             onChange={e => setNokPhone(e.target.value)}
             type="tel"
@@ -205,7 +229,7 @@ export default function SeniorSetup() {
             boxShadow: saving ? 'none' : '0 8px 20px rgba(31,157,85,0.30)',
           }}
         >
-          {saving ? 'Setting up…' : 'Get Started'}
+          {saving ? t(lang, 'settingUp') : t(lang, 'getStarted')}
         </button>
 
         {/* Change role */}
@@ -221,7 +245,7 @@ export default function SeniorSetup() {
             fontFamily: "'Nunito', sans-serif",
           }}
         >
-          ← Not a Senior? Change role
+          {t(lang, 'notSenior')}
         </button>
       </div>
     </div>
