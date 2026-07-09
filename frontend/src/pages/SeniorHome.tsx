@@ -98,7 +98,7 @@ export default function SeniorHome() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
-  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.28) : Math.round(base * 1.1);
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.4) : Math.round(base * 1.1);
 
   const [senior, setSenior] = useState<Senior | null>(null);
   const [status, setStatus] = useState<DailyStatus | null>(null);
