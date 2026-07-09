@@ -112,4 +112,93 @@ router.post('/test-whatsapp', async (req, res) => {
   }
 });
 
+// ── POST /api/debug/run-alerts ────────────────────────────────────────────────
+// Manually triggers the 12pm alert check right now.
+// Called by an external cron service (e.g. cron-job.org) at 12pm SGT.
+router.post('/run-alerts', async (req, res) => {
+  const today = new Date(Date.now() + 8 * 3600000).toISOString().split('T')[0];
+  console.log(`\n⏰ Manual alert trigger for ${today}`);
+
+  const missed = db.prepare(`
+    SELECT s.* FROM seniors s
+    LEFT JOIN daily_status ds ON s.senior_id = ds.senior_id AND ds.date = ?
+    WHERE s.is_active = 1 AND (ds.checked_in_today IS NULL OR ds.checked_in_today = 0)
+  `).all(today);
+
+  if (missed.length === 0) {
+    return res.json({ ok: true, message: 'All seniors checked in — no alerts needed.', missed: 0 });
+  }
+
+  const results = { whatsapp: [], push: [] };
+
+  // WhatsApp alerts
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM) {
+    const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    const byPhone = {};
+    missed.forEach(s => {
+      const phone = s.person_in_charge_phone || s.next_of_kin_phone;
+      if (!phone) return;
+      if (!byPhone[phone]) byPhone[phone] = [];
+      byPhone[phone].push(s);
+    });
+    for (const [phone, group] of Object.entries(byPhone)) {
+      let to = phone.replace(/[\s\-().]/g, '');
+      if (!to.startsWith('+')) to = '+65' + to;
+      const names = group.map(s => s.name).join(', ');
+      const picName = group[0].person_in_charge_name || 'Caregiver';
+      const msg =
+        `Hi ${picName}, this is an automated reminder from Fei Yue Community Services.\n\n` +
+        `The following senior(s) under your care have *not checked in* by 12pm today:\n` +
+        `👤 ${names}\n\n` +
+        `Please check on them to ensure their well-being.\n` +
+        `Centre contact: ${process.env.CENTRE_PHONE || '+65 6511 5100'}`;
+      try {
+        await twilio.messages.create({
+          body: msg,
+          from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+          to: `whatsapp:${to}`,
+        });
+        results.whatsapp.push({ to, status: 'sent' });
+        db.prepare(
+          'INSERT INTO alert_log (alert_id, senior_id, alert_date, alert_type, sent_at, recipient, content) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(randomUUID(), group[0].senior_id, today, 'whatsapp', new Date().toISOString(), to, msg);
+      } catch (err) {
+        results.whatsapp.push({ to, status: 'failed', error: err.message });
+      }
+    }
+  } else {
+    results.whatsapp.push({ status: 'skipped', reason: 'Twilio not configured' });
+  }
+
+  // Push alerts to caregiver devices
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    const webpush = require('web-push');
+    webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+    const caregiverSubs = db.prepare('SELECT * FROM caregiver_push_subscriptions').all();
+    const allNames = missed.map(s => s.name).join(', ');
+    for (const sub of caregiverSubs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({
+            title: `⚠️ ${missed.length} senior${missed.length > 1 ? 's have' : ' has'} not checked in`,
+            body: `${allNames} — please follow up.`,
+            url: '/nok',
+          })
+        );
+        results.push.push({ status: 'sent' });
+      } catch (err) {
+        results.push.push({ status: 'failed', error: err.message });
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          db.prepare('DELETE FROM caregiver_push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
+        }
+      }
+    }
+  } else {
+    results.push.push({ status: 'skipped', reason: 'VAPID not configured' });
+  }
+
+  res.json({ ok: true, missed: missed.length, seniors: missed.map(s => s.name), results });
+});
+
 module.exports = router;
