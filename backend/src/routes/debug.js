@@ -170,27 +170,43 @@ router.post('/run-alerts', async (req, res) => {
     results.whatsapp.push({ status: 'skipped', reason: 'Twilio not configured' });
   }
 
-  // Push alerts to caregiver devices
+  // Push alerts to matched caregiver devices only
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     const webpush = require('web-push');
     webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
-    const caregiverSubs = db.prepare('SELECT * FROM caregiver_push_subscriptions').all();
-    const allNames = missed.map(s => s.name).join(', ');
-    for (const sub of caregiverSubs) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          JSON.stringify({
-            title: `⚠️ ${missed.length} senior${missed.length > 1 ? 's have' : ' has'} not checked in`,
-            body: `${allNames} — please follow up.`,
-            url: '/nok',
-          })
-        );
-        results.push.push({ status: 'sent' });
-      } catch (err) {
-        results.push.push({ status: 'failed', error: err.message });
-        if (err.statusCode === 404 || err.statusCode === 410) {
-          db.prepare('DELETE FROM caregiver_push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
+
+    // Group missed seniors by their caregiver phone
+    const byPhone = {};
+    missed.forEach(s => {
+      let phone = (s.person_in_charge_phone || s.next_of_kin_phone || '').replace(/[\s\-().]/g, '');
+      if (!phone) return;
+      if (!phone.startsWith('+')) phone = '+65' + phone;
+      if (!byPhone[phone]) byPhone[phone] = [];
+      byPhone[phone].push(s);
+    });
+
+    for (const [phone, group] of Object.entries(byPhone)) {
+      // Find caregiver devices registered with this phone number
+      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(phone);
+      if (subs.length === 0) continue;
+
+      const names = group.map(s => s.name).join(', ');
+      for (const sub of subs) {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            JSON.stringify({
+              title: `⚠️ ${group.length} senior${group.length > 1 ? 's have' : ' has'} not checked in`,
+              body: `${names} — please follow up.`,
+              url: '/nok',
+            })
+          );
+          results.push.push({ phone, status: 'sent', seniors: names });
+        } catch (err) {
+          results.push.push({ phone, status: 'failed', error: err.message });
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            db.prepare('DELETE FROM caregiver_push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
+          }
         }
       }
     }

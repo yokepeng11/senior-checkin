@@ -68,6 +68,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS caregiver_push_subscriptions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    phone TEXT,
     endpoint TEXT NOT NULL UNIQUE,
     p256dh TEXT NOT NULL,
     auth TEXT NOT NULL,

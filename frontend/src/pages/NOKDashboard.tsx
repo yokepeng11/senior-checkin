@@ -81,7 +81,8 @@ export default function NOKDashboard() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [notifStatus, setNotifStatus] = useState<'unknown'|'granted'|'denied'|'unsupported'>('unknown');
+  const [notifStatus, setNotifStatus] = useState<'unknown'|'asking-phone'|'granted'|'denied'|'unsupported'>('unknown');
+  const [caregiverPhone, setCaregiverPhone] = useState('');
 
   const load = async (spin = false) => {
     if (spin) setRefreshing(true);
@@ -102,8 +103,12 @@ export default function NOKDashboard() {
     else setNotifStatus('unknown');
   }, []);
 
-  // Called on button tap — iOS requires user gesture
+  // Step 1 — show phone input first
+  const handleEnableClick = () => setNotifStatus('asking-phone');
+
+  // Step 2 — called after phone entered and confirmed (iOS user gesture)
   const enableNotifications = async () => {
+    if (!caregiverPhone.trim()) { alert('Please enter your phone number.'); return; }
     const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!vapidKey || !('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert('Notifications are not available. Make sure the app is installed from the Home Screen.');
@@ -125,7 +130,7 @@ export default function NOKDashboard() {
       await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/caregiver-subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: { endpoint, keys } }),
+        body: JSON.stringify({ phone: caregiverPhone.trim(), subscription: { endpoint, keys } }),
       });
     } catch (e) {
       console.error('Caregiver push subscribe error:', e);
@@ -216,15 +221,40 @@ export default function NOKDashboard() {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#1F2421' }}>Get notified at 12pm</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
-                Receive a push notification if a senior hasn't checked in.
+                Only receive alerts for seniors assigned to you.
               </div>
             </div>
-            <button onClick={enableNotifications} style={{
+            <button onClick={handleEnableClick} style={{
               border: 'none', borderRadius: 12, padding: '10px 16px', cursor: 'pointer',
               background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
               fontSize: 14, fontWeight: 900, color: '#fff', fontFamily: "'Nunito', sans-serif",
               whiteSpace: 'nowrap',
             }}>Enable</button>
+          </div>
+        )}
+        {notifStatus === 'asking-phone' && (
+          <div style={{ background: '#fff', borderRadius: 18, padding: '18px 18px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#1F2421', marginBottom: 6 }}>🔔 Enable Notifications</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginBottom: 14 }}>
+              Enter your phone number so we can link you to your seniors.
+            </div>
+            <input
+              type="tel"
+              placeholder="e.g. +65 8268 7111"
+              value={caregiverPhone}
+              onChange={e => setCaregiverPhone(e.target.value)}
+              style={{
+                width: '100%', border: 'none', outline: 'none', boxSizing: 'border-box',
+                background: '#f5f4f0', borderRadius: 12, padding: '12px 14px',
+                fontSize: 16, fontWeight: 700, color: '#1F2421',
+                fontFamily: "'Nunito', sans-serif", marginBottom: 12,
+              }}
+            />
+            <button onClick={enableNotifications} style={{
+              width: '100%', border: 'none', borderRadius: 12, padding: '13px', cursor: 'pointer',
+              background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
+              fontSize: 15, fontWeight: 900, color: '#fff', fontFamily: "'Nunito', sans-serif",
+            }}>Confirm & Enable</button>
           </div>
         )}
         {notifStatus === 'granted' && (
