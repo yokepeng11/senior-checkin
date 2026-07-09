@@ -106,7 +106,7 @@ export default function SeniorHome() {
   const [settingsNokName, setSettingsNokName] = useState('');
   const [settingsNokPhone, setSettingsNokPhone] = useState('');
   const [notifStatus, setNotifStatus] = useState<'unknown'|'granted'|'denied'|'unsupported'>('unknown');
-  const [reregistering, setReregistering] = useState(false);
+  const [notifLoading, setNotifLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const TIMES = ['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM',
@@ -189,29 +189,19 @@ export default function SeniorHome() {
     }
   }, [id]);
 
-  // ── Force re-register push subscription (called from button tap) ─────────────
-  const reRegisterPush = async () => {
-    if (!id) return;
-    const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    if (!vapidKey) return;
-    setReregistering(true);
+  // ── Turn off notifications ────────────────────────────────────────────────────
+  const turnOffNotifications = async () => {
+    setNotifLoading(true);
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
-      // Unsubscribe old subscription first, then create fresh one
-      const existing = await reg.pushManager.getSubscription();
-      if (existing) await existing.unsubscribe();
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey),
-      });
-      const { endpoint, keys } = sub.toJSON() as { endpoint: string; keys: { p256dh: string; auth: string } };
-      await api.subscribePush(id, { endpoint, keys: keys as { p256dh: string; auth: string } });
-      alert('✅ Notifications re-registered successfully!');
-    } catch (e) {
-      alert('Failed to re-register: ' + (e as Error).message);
-    }
-    setReregistering(false);
+      const reg = await navigator.serviceWorker.getRegistration('/sw.js');
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        await api.unsubscribePush(sub.endpoint);
+        await sub.unsubscribe();
+      }
+      setNotifStatus('unknown');
+    } catch { /* best effort */ }
+    setNotifLoading(false);
   };
 
   // ── Enable notifications — called from a button tap (required by iOS) ────────
@@ -426,22 +416,23 @@ export default function SeniorHome() {
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           {notifStatus === 'granted' ? (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                 <span style={{ fontSize: 26 }}>🔔</span>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 800, color: '#1F9D55' }}>Notifications are on</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: '#9aa09c', marginTop: 2 }}>
-                    You'll be reminded at your check-in time.
+                    You'll be reminded at your check-in time every day.
                   </div>
                 </div>
               </div>
-              <button onClick={reRegisterPush} disabled={reregistering} style={{
-                width: '100%', border: 'none', borderRadius: 12, padding: '11px',
-                background: reregistering ? '#c8e6c9' : '#eef1ee', cursor: reregistering ? 'not-allowed' : 'pointer',
-                fontSize: 14, fontWeight: 800, color: '#1F9D55',
+              <button onClick={turnOffNotifications} disabled={notifLoading} style={{
+                width: '100%', border: 'none', borderRadius: 12, padding: '12px',
+                background: notifLoading ? '#f5f4f0' : '#fdecea',
+                cursor: notifLoading ? 'not-allowed' : 'pointer',
+                fontSize: 15, fontWeight: 800, color: '#c0392b',
                 fontFamily: "'Nunito', sans-serif",
               }}>
-                {reregistering ? 'Re-registering…' : '🔄 Re-register Notifications'}
+                {notifLoading ? 'Turning off…' : '🔕 Turn Off Notifications'}
               </button>
             </div>
           ) : notifStatus === 'denied' ? (
@@ -470,7 +461,7 @@ export default function SeniorHome() {
                 fontSize: 16, fontWeight: 900, color: '#fff',
                 fontFamily: "'Nunito', sans-serif",
               }}>
-                🔔 Enable Notifications
+                🔔 Turn On Notifications
               </button>
             </div>
           )}

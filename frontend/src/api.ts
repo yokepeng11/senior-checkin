@@ -85,6 +85,10 @@ export const api = {
     return post('/push/subscribe', { senior_id, subscription: keys });
   },
 
+  async unsubscribePush(endpoint: string) {
+    return post('/push/unsubscribe', { endpoint });
+  },
+
   async checkin(senior_id: string): Promise<{ status: string; message: string; confirmed_at: string; queued?: boolean }> {
     if (!navigator.onLine) {
       const queue = getQueue();

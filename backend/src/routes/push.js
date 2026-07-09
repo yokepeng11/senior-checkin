@@ -45,4 +45,12 @@ router.post('/caregiver-subscribe', (req, res) => {
   res.json({ ok: true });
 });
 
+// POST /api/push/unsubscribe  — remove a senior's push subscription
+router.post('/unsubscribe', (req, res) => {
+  const { endpoint } = req.body;
+  if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+  db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
+  res.json({ ok: true });
+});
+
 module.exports = router;
