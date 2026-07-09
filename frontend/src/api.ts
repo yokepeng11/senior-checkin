@@ -75,6 +75,12 @@ export const api = {
     return post<import('./types').Senior>('/seniors', data);
   },
 
+  async deleteSenior(id: string) {
+    const r = await fetch(`${BASE}/seniors/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(`API error ${r.status}`);
+    return r.json();
+  },
+
   async checkin(senior_id: string): Promise<{ status: string; message: string; confirmed_at: string; queued?: boolean }> {
     if (!navigator.onLine) {
       const queue = getQueue();

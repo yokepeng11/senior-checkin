@@ -97,7 +97,7 @@ export default function NOKDashboard() {
   const removeSenior = async (senior_id: string, name: string) => {
     if (!confirm(`Remove ${name} from the dashboard?`)) return;
     try {
-      await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/seniors/${senior_id}`, { method: 'DELETE' });
+      await api.deleteSenior(senior_id);
       setData(prev => prev ? {
         ...prev,
         seniors: prev.seniors.filter(s => s.senior_id !== senior_id),
