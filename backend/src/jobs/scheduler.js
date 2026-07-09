@@ -89,7 +89,9 @@ function scheduleDailyReset() {
 }
 
 function scheduleSMSAlerts() {
-  // 12:00 PM SGT: WhatsApp caregiver if senior hasn't checked in
+  // Disabled — alerts are now triggered externally via cron-job.org
+  // hitting POST /api/debug/run-alerts to avoid duplicates on Render free tier
+  return;
   cron.schedule('0 4 * * *', async () => {   // 04:00 UTC = 12:00 SGT
     const today = new Date(Date.now() + 8 * 3600000).toISOString().split('T')[0];
     console.log(`\n⏰ 12pm SGT alert check for ${today}`);
