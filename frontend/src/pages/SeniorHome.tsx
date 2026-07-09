@@ -98,6 +98,7 @@ export default function SeniorHome() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.15) : base;
 
   const [senior, setSenior] = useState<Senior | null>(null);
   const [status, setStatus] = useState<DailyStatus | null>(null);
@@ -367,7 +368,7 @@ export default function SeniorHome() {
             <path d="M11 2L2 11l9 9" stroke="#1F9D55" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </button>
-        <div style={{ fontSize: 24, fontWeight: 900, marginLeft: 16 }}>{t(lang, 'settings')}</div>
+        <div style={{ fontSize: zf(24), fontWeight: 900, marginLeft: 16 }}>{t(lang, 'settings')}</div>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '6px 18px 24px' }}>
@@ -477,8 +478,8 @@ export default function SeniorHome() {
           <div style={{ display: 'flex', gap: 10 }}>
             {(['en', 'zh'] as const).map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
-                flex: 1, border: 'none', borderRadius: 14, padding: '13px',
-                cursor: 'pointer', fontSize: 16, fontWeight: 800,
+                flex: 1, border: 'none', borderRadius: 14, padding: '14px',
+                cursor: 'pointer', fontSize: 18, fontWeight: 800,
                 fontFamily: "'Nunito', sans-serif",
                 background: lang === l ? 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)' : '#f5f4f0',
                 color: lang === l ? '#fff' : '#5a605b',
@@ -537,9 +538,9 @@ export default function SeniorHome() {
       paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}>
       {/* header */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#8a8f8b' }}>{t(lang, 'goodMorning')}</div>
-        <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2 }}>{firstName}</div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#aeb2ae', marginTop: 12 }}>{fmtDate(lang)}</div>
+        <div style={{ fontSize: zf(22), fontWeight: 700, color: '#8a8f8b' }}>{t(lang, 'goodMorning')}</div>
+        <div style={{ fontSize: zf(38), fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2 }}>{firstName}</div>
+        <div style={{ fontSize: zf(17), fontWeight: 700, color: '#aeb2ae', marginTop: 12 }}>{fmtDate(lang)}</div>
       </div>
 
       {/* button or already-checked */}
@@ -547,15 +548,15 @@ export default function SeniorHome() {
         {status?.checked_in ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>☀️</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'allDone')}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#aeb2ae', marginTop: 8 }}>
+            <div style={{ fontSize: zf(22), fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'allDone')}</div>
+            <div style={{ fontSize: zf(16), fontWeight: 700, color: '#aeb2ae', marginTop: 8 }}>
               {t(lang, 'checkedInAt')} {fmtTime(status.last_checkin_time)}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#c4c8c3', marginTop: 4 }}>{t(lang, 'seeTomorrow')}</div>
+            <div style={{ fontSize: zf(15), fontWeight: 600, color: '#c4c8c3', marginTop: 4 }}>{t(lang, 'seeTomorrow')}</div>
           </div>
         ) : (
           <>
-            <div style={{ fontSize: 17, fontWeight: 700, color: '#aeb2ae', textAlign: 'center', letterSpacing: '0.1px' }}>
+            <div style={{ fontSize: zf(17), fontWeight: 700, color: '#aeb2ae', textAlign: 'center', letterSpacing: '0.1px' }}>
               {t(lang, 'tapToCheckin')}
             </div>
             <button
@@ -572,8 +573,8 @@ export default function SeniorHome() {
               aria-label="Tap to check in for today"
             >
               <SunWhite size={52} />
-              <span style={{ fontSize: 27, fontWeight: 900, letterSpacing: '0.2px' }}>{t(lang, 'buttonLabel')}</span>
-              <span style={{ fontSize: 15, fontWeight: 700, opacity: 0.85, letterSpacing: '0.3px' }}>
+              <span style={{ fontSize: zf(27), fontWeight: 900, letterSpacing: '0.2px' }}>{t(lang, 'buttonLabel')}</span>
+              <span style={{ fontSize: zf(15), fontWeight: 700, opacity: 0.85, letterSpacing: '0.3px' }}>
                 {t(lang, 'buttonSub')}
               </span>
             </button>
@@ -599,7 +600,7 @@ export default function SeniorHome() {
           <div style={{
             display: 'flex', alignItems: 'center', gap: 9,
             background: '#ececea', color: '#7d827e',
-            padding: '13px 18px', borderRadius: 16, fontSize: 16, fontWeight: 800, flex: 1,
+            padding: '13px 18px', borderRadius: 16, fontSize: zf(16), fontWeight: 800, flex: 1,
           }}>
             <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#c4c8c3', display: 'inline-block' }} />
             {t(lang, 'notYet')}

@@ -24,6 +24,8 @@ function SunIcon({ size = 58, color = '#1F9D55' }: { size?: number; color?: stri
 export default function RoleSelect() {
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
+  // Scale font sizes up slightly for Chinese characters
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.15) : base;
 
   return (
     <div style={{
@@ -45,8 +47,8 @@ export default function RoleSelect() {
           }}>
             {(['en', 'zh'] as const).map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
-                border: 'none', cursor: 'pointer', borderRadius: 9,
-                padding: '6px 14px', fontSize: 14, fontWeight: 800,
+                border: 'none', cursor: 'pointer', borderRadius: 10,
+                padding: '9px 20px', fontSize: 17, fontWeight: 800,
                 fontFamily: "'Nunito', sans-serif",
                 background: lang === l ? '#1F9D55' : 'transparent',
                 color: lang === l ? '#fff' : '#8a857c',
@@ -67,10 +69,10 @@ export default function RoleSelect() {
             marginBottom: 20 }}>
             <SunIcon size={44} color="#fff" />
           </div>
-          <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: '-0.8px', color: '#1F2421' }}>
+          <div style={{ fontSize: zf(34), fontWeight: 900, letterSpacing: '-0.8px', color: '#1F2421' }}>
             {t(lang, 'appTitle')}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
+          <div style={{ fontSize: zf(16), fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
             {t(lang, 'orgName')}
           </div>
         </div>
@@ -99,8 +101,8 @@ export default function RoleSelect() {
             <SunIcon size={36} color="#fff" />
           </div>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421' }}>{t(lang, 'iAmSenior')}</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#8a857c', marginTop: 3 }}>
+            <div style={{ fontSize: zf(22), fontWeight: 900, color: '#1F2421' }}>{t(lang, 'iAmSenior')}</div>
+            <div style={{ fontSize: zf(15), fontWeight: 600, color: '#8a857c', marginTop: 3 }}>
               {t(lang, 'seniorSubtitle')}
             </div>
           </div>
@@ -129,8 +131,8 @@ export default function RoleSelect() {
             👨‍👩‍👧
           </div>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421' }}>{t(lang, 'iAmCaregiver')}</div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#8a857c', marginTop: 3 }}>
+            <div style={{ fontSize: zf(22), fontWeight: 900, color: '#1F2421' }}>{t(lang, 'iAmCaregiver')}</div>
+            <div style={{ fontSize: zf(15), fontWeight: 600, color: '#8a857c', marginTop: 3 }}>
               {t(lang, 'caregiverSubtitle')}
             </div>
           </div>

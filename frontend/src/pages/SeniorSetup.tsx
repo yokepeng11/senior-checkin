@@ -35,6 +35,7 @@ const inputStyle: React.CSSProperties = {
 export default function SeniorSetup() {
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
+  const zf = (base: number) => lang === 'zh' ? Math.round(base * 1.15) : base;
   const [name, setName] = useState('');
   const [nokName, setNokName] = useState('');
   const [nokPhone, setNokPhone] = useState('');
@@ -99,8 +100,8 @@ export default function SeniorSetup() {
           }}>
             {(['en', 'zh'] as const).map(l => (
               <button key={l} onClick={() => setLang(l)} style={{
-                border: 'none', cursor: 'pointer', borderRadius: 9,
-                padding: '6px 14px', fontSize: 14, fontWeight: 800,
+                border: 'none', cursor: 'pointer', borderRadius: 10,
+                padding: '9px 20px', fontSize: 17, fontWeight: 800,
                 fontFamily: "'Nunito', sans-serif",
                 background: lang === l ? '#1F9D55' : 'transparent',
                 color: lang === l ? '#fff' : '#8a857c',
@@ -123,10 +124,10 @@ export default function SeniorSetup() {
           }}>
             <SunIcon />
           </div>
-          <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.5px' }}>
+          <div style={{ fontSize: zf(28), fontWeight: 900, letterSpacing: '-0.5px' }}>
             {t(lang, 'welcome')}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
+          <div style={{ fontSize: zf(16), fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
             {t(lang, 'welcomeSub')}
           </div>
         </div>
@@ -138,7 +139,7 @@ export default function SeniorSetup() {
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
           padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
+          <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
             {t(lang, 'yourName')}
           </div>
           <input
@@ -156,7 +157,7 @@ export default function SeniorSetup() {
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
           padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 14 }}>
+          <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 14 }}>
             {t(lang, 'preferredCheckinTime')}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
@@ -184,7 +185,7 @@ export default function SeniorSetup() {
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
           padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
+          <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
             {t(lang, 'caregiverName')}
           </div>
           <input
@@ -193,7 +194,7 @@ export default function SeniorSetup() {
             value={nokName}
             onChange={e => setNokName(e.target.value)}
           />
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
+          <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
             {t(lang, 'contactNumber')}
           </div>
           <input
@@ -241,7 +242,7 @@ export default function SeniorSetup() {
           style={{
             width: '100%', border: 'none', background: 'none',
             marginTop: 16, cursor: 'pointer',
-            fontSize: 14, fontWeight: 700, color: '#9aa09c',
+            fontSize: zf(14), fontWeight: 700, color: '#9aa09c',
             fontFamily: "'Nunito', sans-serif",
           }}
         >
