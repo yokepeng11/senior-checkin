@@ -1,6 +1,6 @@
 {
-  "name": "Senior Daily Check-In",
-  "short_name": "CheckIn",
+  "name": "Good Morning",
+  "short_name": "Good Morning",
   "description": "Daily check-in for seniors — stay connected with your loved ones",
   "start_url": "/",
   "display": "standalone",
