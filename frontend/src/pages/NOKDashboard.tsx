@@ -88,6 +88,8 @@ export default function NOKDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown'|'asking-phone'|'granted'|'denied'|'unsupported'>('unknown');
+  // sc_caregiver_id = device UUID used to identify this caregiver in the links table
+  // sc_caregiver_phone = actual phone number, only needed for push notification alerts
   const [caregiverPhone, setCaregiverPhone] = useState(() => localStorage.getItem('sc_caregiver_phone') || '');
   const [editMode, setEditMode] = useState(false);
   const [hiddenNames, setHiddenNames] = useState<string[]>(loadHidden);
@@ -99,7 +101,8 @@ export default function NOKDashboard() {
   const [codeError, setCodeError] = useState('');
   const [codeLinking, setCodeLinking] = useState(false);
 
-  const storedPhone = localStorage.getItem('sc_caregiver_phone') || undefined;
+  // Use device UUID as the caregiver identifier for all link-table operations
+  const storedPhone = localStorage.getItem('sc_caregiver_id') || localStorage.getItem('sc_caregiver_phone') || undefined;
 
   const load = async (spin = false) => {
     if (spin) setRefreshing(true);
@@ -109,6 +112,13 @@ export default function NOKDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Auto-open invite code modal if no seniors are linked after first load
+  useEffect(() => {
+    if (!loading && visibleSeniors.length === 0 && addStep === 'idle') {
+      setAddStep('enter-code');
+    }
+  }, [loading]);
 
   // Auto-refresh every 60 s so stats stay current without a manual reload
   useEffect(() => {
@@ -420,6 +430,7 @@ export default function NOKDashboard() {
       <div style={{ textAlign: 'center', padding: '8px 18px 28px' }}>
         <button onClick={() => {
           localStorage.removeItem('sc_role');
+          localStorage.removeItem('sc_caregiver_id');
           localStorage.removeItem('sc_caregiver_phone');
           navigate('/', { replace: true });
         }} style={{

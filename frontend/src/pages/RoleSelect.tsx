@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../LangContext';
 import { t } from '../i18n';
+import { api } from '../api';
 
 // Sun SVG — from design
 function SunIcon({ size = 58, color = '#1F9D55' }: { size?: number; color?: string }) {
@@ -22,34 +23,58 @@ function SunIcon({ size = 58, color = '#1F9D55' }: { size?: number; color?: stri
   );
 }
 
+// Returns a stable per-device UUID used as the caregiver's identity
+function getDeviceId(): string {
+  let id = localStorage.getItem('sc_caregiver_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('sc_caregiver_id', id);
+  }
+  return id;
+}
+
 export default function RoleSelect() {
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
   const zf = (base: number) => Math.round(base * 1.4);
 
-  // 'select' = role choice screen, 'caregiver-phone' = phone entry screen
-  const [step, setStep] = useState<'select' | 'caregiver-phone'>('select');
-  const [phone, setPhone] = useState('');
-  const [phoneError, setPhoneError] = useState('');
+  // 'select' → role choice, 'enter-code' → invite code input, 'confirm' → show found senior
+  const [step, setStep] = useState<'select' | 'enter-code' | 'confirm'>('select');
+  const [codeInput, setCodeInput] = useState('');
+  const [codeResult, setCodeResult] = useState<{ senior_id: string; name: string } | null>(null);
+  const [codeError, setCodeError] = useState('');
+  const [codeLinking, setCodeLinking] = useState(false);
 
-  const normalisePhone = (raw: string) => {
-    const d = raw.replace(/\D/g, '');
-    // Remove Singapore +65 country code only when it produces an 8-digit local number
-    return (d.startsWith('65') && d.length === 10) ? d.slice(2) : d;
+  const findSeniorByCode = async () => {
+    const code = codeInput.trim().toUpperCase();
+    if (code.length < 4) { setCodeError('Please enter the full 6-character code.'); return; }
+    setCodeError('');
+    setCodeLinking(true);
+    try {
+      const result = await api.getSeniorByCode(code);
+      setCodeResult(result);
+      setStep('confirm');
+    } catch {
+      setCodeError('Code not found. Please check with your senior.');
+    } finally { setCodeLinking(false); }
   };
 
-  const confirmCaregiverPhone = () => {
-    const raw = phone.trim();
-    if (!raw) { setPhoneError('Please enter your phone number.'); return; }
-    const normalised = normalisePhone(raw);
-    if (normalised.length < 7) { setPhoneError('Please enter a valid phone number.'); return; }
-    localStorage.setItem('sc_caregiver_phone', normalised);
-    localStorage.setItem('sc_role', 'caregiver');
-    navigate('/nok', { replace: true });
+  const confirmLink = async () => {
+    if (!codeResult) return;
+    setCodeLinking(true);
+    try {
+      const deviceId = getDeviceId();
+      await api.linkCaregiverToSenior(deviceId, codeInput.trim().toUpperCase());
+      localStorage.setItem('sc_role', 'caregiver');
+      navigate('/nok', { replace: true });
+    } catch {
+      setCodeError('Could not link. Please try again.');
+      setCodeLinking(false);
+    }
   };
 
-  // ── Phone entry step ──────────────────────────────────────────────────────
-  if (step === 'caregiver-phone') {
+  // ── Invite-code entry step ────────────────────────────────────────────────
+  if (step === 'enter-code' || step === 'confirm') {
     return (
       <div style={{
         minHeight: '100vh', background: '#e7e5df',
@@ -58,13 +83,13 @@ export default function RoleSelect() {
       }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           {/* Back */}
-          <button onClick={() => { setStep('select'); setPhoneError(''); }} style={{
+          <button onClick={() => { setStep('select'); setCodeInput(''); setCodeError(''); setCodeResult(null); }} style={{
             border: 'none', background: 'none', cursor: 'pointer',
             fontSize: 15, fontWeight: 700, color: '#8a857c',
             fontFamily: "'Nunito', sans-serif", marginBottom: 28, padding: 0,
           }}>← Back</button>
 
-          {/* Icon */}
+          {/* Icon + title */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
             <div style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -74,48 +99,66 @@ export default function RoleSelect() {
               marginBottom: 16, fontSize: 34,
             }}>👨‍👩‍👧</div>
             <div style={{ fontSize: zf(26), fontWeight: 900, color: '#1F2421' }}>
-              Caregiver / NOK
+              {step === 'confirm' ? 'Senior Found!' : 'Enter Invite Code'}
             </div>
             <div style={{ fontSize: zf(15), fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
-              Enter your phone number so we can link you to your seniors.
+              {step === 'confirm'
+                ? 'Confirm to link this senior to your dashboard.'
+                : 'Ask your senior to open their app → Settings → Invite Code.'}
             </div>
           </div>
 
-          {/* Phone input */}
           <div style={{ background: '#fff', borderRadius: 20, padding: '22px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
-            <label style={{ display: 'block', fontSize: zf(14), fontWeight: 800, color: '#1F2421', marginBottom: 10 }}>
-              Mobile Number
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={e => { setPhone(e.target.value); setPhoneError(''); }}
-              onKeyDown={e => e.key === 'Enter' && confirmCaregiverPhone()}
-              placeholder="+65 9123 4567"
-              style={{
-                width: '100%', border: phoneError ? '2px solid #e74c3c' : '2px solid #e8e6e2',
-                borderRadius: 14, padding: '14px 16px',
-                fontSize: zf(18), fontWeight: 700, fontFamily: "'Nunito', sans-serif",
-                color: '#1F2421', outline: 'none', boxSizing: 'border-box',
-              }}
-            />
-            {phoneError && (
-              <div style={{ color: '#e74c3c', fontSize: 13, fontWeight: 700, marginTop: 8 }}>{phoneError}</div>
-            )}
+            {step === 'enter-code' && <>
+              <input
+                type="text"
+                value={codeInput}
+                onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError(''); }}
+                onKeyDown={e => e.key === 'Enter' && findSeniorByCode()}
+                placeholder="e.g. AH7K2M"
+                maxLength={6}
+                autoFocus
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  border: codeError ? '2px solid #e74c3c' : '2px solid #e8e6e2',
+                  borderRadius: 14, padding: '16px 18px',
+                  fontSize: zf(26), fontWeight: 900, letterSpacing: '10px', textAlign: 'center',
+                  fontFamily: 'monospace', color: '#1F9D55', outline: 'none',
+                }}
+              />
+              {codeError && <div style={{ color: '#e74c3c', fontSize: 13, fontWeight: 700, marginTop: 8 }}>{codeError}</div>}
+              <button onClick={findSeniorByCode} disabled={codeLinking} style={{
+                width: '100%', marginTop: 18, border: 'none', borderRadius: 16, padding: '16px',
+                background: codeLinking ? '#c8e6d4' : 'linear-gradient(135deg, #2E75B6, #1a5490)',
+                fontSize: zf(17), fontWeight: 900, color: '#fff',
+                fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+              }}>
+                {codeLinking ? 'Searching…' : 'Find Senior →'}
+              </button>
+            </>}
 
-            <button onClick={confirmCaregiverPhone} style={{
-              width: '100%', marginTop: 18,
-              background: 'linear-gradient(135deg, #2E75B6, #1a5490)',
-              border: 'none', borderRadius: 16, padding: '16px',
-              fontSize: zf(17), fontWeight: 900, color: '#fff',
-              fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
-            }}>
-              Open Dashboard →
-            </button>
-          </div>
-
-          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, fontWeight: 600, color: '#b5b0a8' }}>
-            Your number is only used to match you to the seniors you care for.
+            {step === 'confirm' && codeResult && <>
+              <div style={{ background: '#f0f7f3', borderRadius: 14, padding: '18px 20px', marginBottom: 20 }}>
+                <div style={{ fontSize: zf(22), fontWeight: 900, color: '#1F9D55' }}>{codeResult.name}</div>
+                <div style={{ fontSize: zf(14), fontWeight: 600, color: '#9aa09c', marginTop: 4 }}>Code: {codeInput}</div>
+              </div>
+              {codeError && <div style={{ color: '#e74c3c', fontSize: 13, fontWeight: 700, marginBottom: 12 }}>{codeError}</div>}
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={() => setStep('enter-code')} style={{
+                  flex: 1, border: '2px solid #e8e6e2', borderRadius: 16, padding: '14px',
+                  background: '#fff', fontSize: zf(16), fontWeight: 800, color: '#9aa09c',
+                  fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+                }}>Back</button>
+                <button onClick={confirmLink} disabled={codeLinking} style={{
+                  flex: 2, border: 'none', borderRadius: 16, padding: '14px',
+                  background: codeLinking ? '#c8e6d4' : 'linear-gradient(135deg, #2E75B6, #1a5490)',
+                  fontSize: zf(16), fontWeight: 900, color: '#fff',
+                  fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+                }}>
+                  {codeLinking ? 'Linking…' : 'Confirm & Open Dashboard ✓'}
+                </button>
+              </div>
+            </>}
           </div>
         </div>
       </div>
@@ -207,14 +250,14 @@ export default function RoleSelect() {
         {/* NOK button */}
         <button
           onClick={() => {
-            // Returning caregiver — phone already stored, go straight in
-            const savedPhone = localStorage.getItem('sc_caregiver_phone');
-            if (savedPhone) {
+            const deviceId = localStorage.getItem('sc_caregiver_id');
+            if (deviceId) {
+              // Returning caregiver — already set up, go straight to dashboard
               localStorage.setItem('sc_role', 'caregiver');
               navigate('/nok', { replace: true });
             } else {
-              // New caregiver — ask for phone first
-              setStep('caregiver-phone');
+              // New caregiver — ask for invite code first
+              setStep('enter-code');
             }
           }}
           style={{
