@@ -162,6 +162,12 @@ export default function NOKDashboard() {
     }
   };
 
+  // Compute stats from the locally-filtered list so deleted seniors don't inflate the counts
+  const visibleSeniors = (data?.seniors ?? []).filter(s => !hiddenNames.includes(s.name));
+  const totalVisible    = visibleSeniors.length;
+  const checkedInVisible = visibleSeniors.filter(s => s.today_status.checked_in).length;
+  const pendingVisible  = totalVisible - checkedInVisible;
+
   const today = new Date().toLocaleDateString('en-SG',
     { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -204,10 +210,10 @@ export default function NOKDashboard() {
         {/* stats row */}
         <div style={{ display: 'flex', gap: 12 }}>
           {[
-            { label: 'Total', value: data?.total_seniors ?? '—', bg: 'rgba(255,255,255,0.18)' },
-            { label: 'Checked In', value: data?.checked_in_today ?? '—', bg: 'rgba(255,255,255,0.25)' },
-            { label: 'Pending', value: data?.not_checked_in ?? '—',
-              bg: (data?.not_checked_in ?? 0) > 0 ? 'rgba(220,50,50,0.45)' : 'rgba(255,255,255,0.18)' },
+            { label: 'Total',      value: loading ? '—' : totalVisible,     bg: 'rgba(255,255,255,0.18)' },
+            { label: 'Checked In', value: loading ? '—' : checkedInVisible, bg: 'rgba(255,255,255,0.25)' },
+            { label: 'Pending',    value: loading ? '—' : pendingVisible,
+              bg: pendingVisible > 0 ? 'rgba(220,50,50,0.45)' : 'rgba(255,255,255,0.18)' },
           ].map(stat => (
             <div key={stat.label} style={{
               flex: 1, background: stat.bg, borderRadius: 18, padding: '14px 10px',
@@ -223,7 +229,7 @@ export default function NOKDashboard() {
       {/* ── Content ── */}
       <div style={{ padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {/* alert banner */}
-        {(data?.not_checked_in ?? 0) > 0 && (
+        {!loading && pendingVisible > 0 && (
           <div style={{
             background: '#FFF7E4', borderRadius: 18, padding: '14px 18px',
             display: 'flex', gap: 10, alignItems: 'flex-start',
@@ -234,13 +240,13 @@ export default function NOKDashboard() {
               <circle cx="12" cy="17" r="1.4" fill="#fff"/>
             </svg>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#8a6a16', lineHeight: 1.45 }}>
-              <strong>{data!.not_checked_in} senior{data!.not_checked_in > 1 ? 's have' : ' has'} not checked in yet.</strong>{' '}
+              <strong>{pendingVisible} senior{pendingVisible > 1 ? 's have' : ' has'} not checked in yet.</strong>{' '}
               A WhatsApp alert will be sent at 12:00 PM if they remain unchecked.
             </div>
           </div>
         )}
 
-        {(data?.not_checked_in ?? 0) === 0 && (data?.total_seniors ?? 0) > 0 && (
+        {!loading && pendingVisible === 0 && totalVisible > 0 && (
           <div style={{
             background: '#e3f3e9', borderRadius: 18, padding: '14px 18px',
             fontSize: 15, fontWeight: 700, color: '#15703C',
