@@ -79,7 +79,9 @@ db.exec(`
 
 // ── Migrations ────────────────────────────────────────────────────────────────
 try { db.exec('ALTER TABLE daily_status ADD COLUMN push_reminder_sent INTEGER DEFAULT 0'); } catch {}
-try { db.exec('ALTER TABLE seniors ADD COLUMN invite_code TEXT UNIQUE'); } catch {}
+// Add invite_code WITHOUT UNIQUE so ALTER TABLE never fails on older SQLite;
+// uniqueness is enforced by the code generation logic instead.
+try { db.exec('ALTER TABLE seniors ADD COLUMN invite_code TEXT'); } catch {}
 
 // New table: many-to-many caregiver ↔ senior links (replaces phone matching)
 db.exec(`
@@ -103,12 +105,17 @@ function _genCode() {
   return c;
 }
 
-const _noCode = db.prepare('SELECT senior_id FROM seniors WHERE invite_code IS NULL').all();
-for (const s of _noCode) {
-  let code;
-  do { code = _genCode(); }
-  while (db.prepare('SELECT 1 FROM seniors WHERE invite_code = ?').get(code));
-  db.prepare('UPDATE seniors SET invite_code = ? WHERE senior_id = ?').run(code, s.senior_id);
+// Wrap in try/catch in case column didn't exist before this migration ran
+try {
+  const _noCode = db.prepare('SELECT senior_id FROM seniors WHERE invite_code IS NULL').all();
+  for (const s of _noCode) {
+    let code;
+    do { code = _genCode(); }
+    while (db.prepare('SELECT 1 FROM seniors WHERE invite_code = ?').get(code));
+    db.prepare('UPDATE seniors SET invite_code = ? WHERE senior_id = ?').run(code, s.senior_id);
+  }
+} catch (e) {
+  console.error('invite_code migration warning:', e.message);
 }
 
 // Auto-migrate existing person_in_charge_phone links into caregiver_senior_links

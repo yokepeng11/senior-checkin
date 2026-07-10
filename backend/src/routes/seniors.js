@@ -22,11 +22,15 @@ router.get('/:id', (req, res) => {
 
   // Auto-generate invite code if missing (handles old records and first-time deploys)
   if (!senior.invite_code) {
-    let code;
-    do { code = genInviteCode(); }
-    while (db.prepare('SELECT 1 FROM seniors WHERE invite_code = ?').get(code));
-    db.prepare('UPDATE seniors SET invite_code = ? WHERE senior_id = ?').run(code, senior.senior_id);
-    senior.invite_code = code;
+    try {
+      let code;
+      do { code = genInviteCode(); }
+      while (db.prepare('SELECT 1 FROM seniors WHERE invite_code = ?').get(code));
+      db.prepare('UPDATE seniors SET invite_code = ? WHERE senior_id = ?').run(code, senior.senior_id);
+      senior.invite_code = code;
+    } catch (e) {
+      console.error('Could not generate invite_code:', e.message);
+    }
   }
 
   res.json(senior);
