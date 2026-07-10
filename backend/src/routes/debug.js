@@ -2,10 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { randomUUID } = require('crypto');
-const { normalisePhone } = require('../phoneUtils');
 
 // ── GET /api/debug/status ─────────────────────────────────────────────────────
-// Returns configuration state and DB counts so we can diagnose issues
 router.get('/status', (req, res) => {
   const seniors = db.prepare('SELECT senior_id, name, person_in_charge_phone, preferred_checkin_time FROM seniors WHERE is_active = 1').all();
   const seniorSubs = db.prepare('SELECT senior_id, endpoint FROM push_subscriptions').all();
@@ -34,7 +32,6 @@ router.get('/status', (req, res) => {
 });
 
 // ── POST /api/debug/test-push ─────────────────────────────────────────────────
-// Immediately sends a test push to ALL registered devices (senior + caregiver)
 router.post('/test-push', async (req, res) => {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     return res.status(400).json({ error: 'VAPID keys not configured on Render' });
@@ -49,7 +46,6 @@ router.post('/test-push', async (req, res) => {
 
   const results = [];
 
-  // Senior subs
   const seniorSubs = db.prepare('SELECT ps.*, s.name FROM push_subscriptions ps JOIN seniors s ON ps.senior_id = s.senior_id').all();
   for (const sub of seniorSubs) {
     try {
@@ -66,7 +62,6 @@ router.post('/test-push', async (req, res) => {
     }
   }
 
-  // Caregiver subs
   const caregiverSubs = db.prepare('SELECT * FROM caregiver_push_subscriptions').all();
   for (const sub of caregiverSubs) {
     try {
@@ -87,7 +82,6 @@ router.post('/test-push', async (req, res) => {
 });
 
 // ── POST /api/debug/test-whatsapp ─────────────────────────────────────────────
-// Body: { phone: "+6591234567" }  — sends a test WhatsApp to that number
 router.post('/test-whatsapp', async (req, res) => {
   const { phone } = req.body;
   if (!phone) return res.status(400).json({ error: 'Provide { phone: "+6591234567" }' });
@@ -96,7 +90,6 @@ router.post('/test-whatsapp', async (req, res) => {
     return res.status(400).json({ error: 'Twilio env vars not configured on Render' });
   }
 
-  // Normalise
   let to = phone.replace(/[\s\-().]/g, '');
   if (!to.startsWith('+')) to = '+65' + to;
 
@@ -114,8 +107,6 @@ router.post('/test-whatsapp', async (req, res) => {
 });
 
 // ── POST /api/debug/run-alerts ────────────────────────────────────────────────
-// Manually triggers the 12pm alert check right now.
-// Called by an external cron service (e.g. cron-job.org) at 12pm SGT.
 router.post('/run-alerts', async (req, res) => {
   const today = new Date(Date.now() + 8 * 3600000).toISOString().split('T')[0];
   console.log(`\n⏰ Manual alert trigger for ${today}`);
@@ -130,22 +121,27 @@ router.post('/run-alerts', async (req, res) => {
     return res.json({ ok: true, message: 'All seniors checked in — no alerts needed.', missed: 0 });
   }
 
-  const results = { whatsapp: [], push: [] };
+  const whatsappResults = [];
+  const pushResults = [];
 
-  // WhatsApp alerts
+  // ── WhatsApp alerts ──────────────────────────────────────────────────────────
   if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM) {
     const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    const byPhone = {};
-    missed.forEach(s => {
-      const phone = s.person_in_charge_phone || s.next_of_kin_phone;
-      if (!phone) return;
-      if (!byPhone[phone]) byPhone[phone] = [];
-      byPhone[phone].push(s);
+
+    // Group missed seniors by caregiver phone
+    const grouped = {};
+    missed.forEach(function(s) {
+      const ph = s.person_in_charge_phone || s.next_of_kin_phone;
+      if (!ph) return;
+      if (!grouped[ph]) grouped[ph] = [];
+      grouped[ph].push(s);
     });
-    for (const [phone, group] of Object.entries(byPhone)) {
-      let to = phone.replace(/[\s\-().]/g, '');
+
+    for (const caregiverPhone of Object.keys(grouped)) {
+      const group = grouped[caregiverPhone];
+      let to = caregiverPhone.replace(/[\s\-().]/g, '');
       if (!to.startsWith('+')) to = '+65' + to;
-      const names = group.map(s => s.name).join(', ');
+      const names = group.map(function(s) { return s.name; }).join(', ');
       const picName = group[0].person_in_charge_name || 'Caregiver';
       const msg =
         `Hi ${picName}, this is an automated reminder from Fei Yue Community Services.\n\n` +
@@ -159,38 +155,38 @@ router.post('/run-alerts', async (req, res) => {
           from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
           to: `whatsapp:${to}`,
         });
-        results.whatsapp.push({ to, status: 'sent' });
+        whatsappResults.push({ to, status: 'sent' });
         db.prepare(
           'INSERT INTO alert_log (alert_id, senior_id, alert_date, alert_type, sent_at, recipient, content) VALUES (?, ?, ?, ?, ?, ?, ?)'
         ).run(randomUUID(), group[0].senior_id, today, 'whatsapp', new Date().toISOString(), to, msg);
       } catch (err) {
-        results.whatsapp.push({ to, status: 'failed', error: err.message });
+        whatsappResults.push({ to, status: 'failed', error: err.message });
       }
     }
   } else {
-    results.whatsapp.push({ status: 'skipped', reason: 'Twilio not configured' });
+    whatsappResults.push({ status: 'skipped', reason: 'Twilio not configured' });
   }
 
-  // Push alerts to matched caregiver devices only
+  // ── Push alerts ──────────────────────────────────────────────────────────────
   if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     const webpush = require('web-push');
     webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 
-    // For each missed senior, find all linked caregivers and push to their devices
-    // Group by caregiver phone so each caregiver gets ONE notification listing all their missed seniors
-    const caregiverMissed = {};
+    // Group missed seniors by caregiver device ID from links table
+    const caregiverGroups = {};
     for (const senior of missed) {
       const links = db.prepare('SELECT caregiver_phone FROM caregiver_senior_links WHERE senior_id = ?').all(senior.senior_id);
       for (const link of links) {
-        if (!caregiverMissed[link.caregiver_phone]) caregiverMissed[link.caregiver_phone] = [];
-        caregiverMissed[link.caregiver_phone].push(senior);
+        if (!caregiverGroups[link.caregiver_phone]) caregiverGroups[link.caregiver_phone] = [];
+        caregiverGroups[link.caregiver_phone].push(senior);
       }
     }
 
-    for (const [phone, group] of Object.entries(caregiverMissed)) {
-      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(phone);
+    for (const caregiverId of Object.keys(caregiverGroups)) {
+      const group = caregiverGroups[caregiverId];
+      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(caregiverId);
       if (subs.length === 0) continue;
-      const names = group.map(s => s.name).join(', ');
+      const names = group.map(function(s) { return s.name; }).join(', ');
       for (const sub of subs) {
         try {
           await webpush.sendNotification(
@@ -201,9 +197,9 @@ router.post('/run-alerts', async (req, res) => {
               url: '/nok',
             })
           );
-          results.push({ phone, status: 'sent', seniors: names });
+          pushResults.push({ caregiverId, status: 'sent', seniors: names });
         } catch (err) {
-          results.push({ phone, status: 'failed', error: err.message });
+          pushResults.push({ caregiverId, status: 'failed', error: err.message });
           if (err.statusCode === 404 || err.statusCode === 410) {
             db.prepare('DELETE FROM caregiver_push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
           }
@@ -211,15 +207,13 @@ router.post('/run-alerts', async (req, res) => {
       }
     }
   } else {
-    results.push.push({ status: 'skipped', reason: 'VAPID not configured' });
+    pushResults.push({ status: 'skipped', reason: 'VAPID not configured' });
   }
 
-  res.json({ ok: true, missed: missed.length, seniors: missed.map(s => s.name), results });
+  res.json({ ok: true, missed: missed.length, seniors: missed.map(function(s) { return s.name; }), whatsapp: whatsappResults, push: pushResults });
 });
 
 // ── POST /api/debug/send-push-reminders ──────────────────────────────────────
-// Called by cron-job.org at each preferred check-in time (e.g. 9:00 AM SGT).
-// Sends push reminders to seniors whose preferred time matches current SGT hour.
 router.post('/send-push-reminders', async (req, res) => {
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     return res.status(400).json({ error: 'VAPID keys not configured' });
@@ -228,7 +222,6 @@ router.post('/send-push-reminders', async (req, res) => {
   const webpush = require('web-push');
   webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 
-  // Current SGT time
   const now = new Date();
   const sgtMs = now.getTime() + 8 * 3600000;
   const sgtDate = new Date(sgtMs);
@@ -237,7 +230,6 @@ router.post('/send-push-reminders', async (req, res) => {
 
   console.log(`\n🔔 External push-reminder trigger — SGT ${sgtHour}:00 on ${today}`);
 
-  // Find seniors whose preferred time matches this hour, not yet reminded, not yet checked in
   const seniors = db.prepare(`
     SELECT s.senior_id, s.name FROM seniors s
     LEFT JOIN daily_status ds ON s.senior_id = ds.senior_id AND ds.date = ?
@@ -248,7 +240,7 @@ router.post('/send-push-reminders', async (req, res) => {
   `).all(today, sgtHour);
 
   if (seniors.length === 0) {
-    return res.json({ ok: true, message: `No seniors due for a reminder at ${sgtHour}:00 SGT (already sent or checked in).`, sent: 0 });
+    return res.json({ ok: true, message: `No seniors due for a reminder at ${sgtHour}:00 SGT.`, sent: 0 });
   }
 
   const results = [];
@@ -266,7 +258,6 @@ router.post('/send-push-reminders', async (req, res) => {
           })
         );
         results.push({ senior: senior.name, status: 'sent' });
-        console.log(`  ✅ Push sent to ${senior.name}`);
         sent = true;
       } catch (err) {
         results.push({ senior: senior.name, status: 'failed', error: err.message });
@@ -284,7 +275,7 @@ router.post('/send-push-reminders', async (req, res) => {
     }
   }
 
-  res.json({ ok: true, sgtHour, seniors: seniors.map(s => s.name), results });
+  res.json({ ok: true, sgtHour, seniors: seniors.map(function(s) { return s.name; }), results });
 });
 
 module.exports = router;
