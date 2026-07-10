@@ -112,6 +112,8 @@ export default function SeniorHome() {
   const [settingsNokPhone, setSettingsNokPhone] = useState('');
   const [notifStatus, setNotifStatus] = useState<'unknown'|'granted'|'denied'|'unsupported'>('unknown');
   const [notifLoading, setNotifLoading] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const TIMES = ['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM',
@@ -269,6 +271,9 @@ export default function SeniorHome() {
 
   const saveSettings = async () => {
     if (!id) return;
+    setSettingsError('');
+    setSettingsSaving(true);
+
     const label = TIMES[prefIdx];
     const h24 = (() => {
       const [hStr] = label.split(':');
@@ -277,6 +282,16 @@ export default function SeniorHome() {
       if (label.includes('AM') && h === 12) h = 0;
       return `${String(h).padStart(2, '0')}:00`;
     })();
+
+    // Update localStorage FIRST so the recovery code always uses the
+    // latest phone number the senior typed — even if the API call fails
+    localStorage.setItem('sc_senior_profile', JSON.stringify({
+      name: settingsName,
+      nokName: settingsNokName,
+      nokPhone: settingsNokPhone,
+      prefTime: h24,
+    }));
+
     try {
       await api.updateSenior(id, {
         name: settingsName,
@@ -290,15 +305,16 @@ export default function SeniorHome() {
         person_in_charge_name: settingsNokName,
         person_in_charge_phone: settingsNokPhone,
       } : prev);
-      // Keep cached profile in sync so silent recovery stays up to date
-      localStorage.setItem('sc_senior_profile', JSON.stringify({
-        name: settingsName,
-        nokName: settingsNokName,
-        nokPhone: settingsNokPhone,
-        prefTime: h24,
-      }));
-    } catch {}
-    setScreen('main');
+      setSettingsSaving(false);
+      setScreen('main');
+    } catch {
+      setSettingsSaving(false);
+      setSettingsError(
+        lang === 'zh'
+          ? '保存失败，请检查网络后重试。'
+          : 'Could not save — please check your connection and try again.'
+      );
+    }
   };
 
   const firstName = senior?.name?.split(' ')[0] ?? 'Friend';
@@ -377,7 +393,7 @@ export default function SeniorHome() {
           color: '#9aa09c', margin: '8px 6px 10px' }}>{t(lang, 'yourDetailsSetting')}</div>
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'yourName')}</div>
-          <input style={inputSt} value={settingsName} onChange={e => setSettingsName(e.target.value)} placeholder={t(lang, 'yourName')} />
+          <input style={inputSt} value={settingsName} onChange={e => { setSettingsName(e.target.value); setSettingsError(''); }} placeholder={t(lang, 'yourName')} />
         </div>
 
         {/* time section */}
@@ -409,10 +425,10 @@ export default function SeniorHome() {
         <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'caregiverName')}</div>
           <input style={{ ...inputSt, marginBottom: 14 }} value={settingsNokName}
-            onChange={e => setSettingsNokName(e.target.value)} placeholder={t(lang, 'caregiverName')} />
+            onChange={e => { setSettingsNokName(e.target.value); setSettingsError(''); }} placeholder={t(lang, 'caregiverName')} />
           <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'contactNumber')}</div>
           <input style={inputSt} value={settingsNokPhone} type="tel"
-            onChange={e => setSettingsNokPhone(e.target.value)} placeholder="+65 9123 4567" />
+            onChange={e => { setSettingsNokPhone(e.target.value); setSettingsError(''); }} placeholder="+65 9123 4567" />
         </div>
 
         {/* notifications */}
@@ -504,14 +520,29 @@ export default function SeniorHome() {
           </div>
         </div>
 
+        {/* save error */}
+        {settingsError ? (
+          <div style={{
+            marginTop: 16, background: '#fdecea', borderRadius: 14,
+            padding: '12px 16px', fontSize: zf(14), fontWeight: 700, color: '#c0392b',
+          }}>
+            ⚠️ {settingsError}
+          </div>
+        ) : null}
+
         {/* save */}
-        <button onClick={saveSettings} style={{
-          marginTop: 20, width: '100%',
-          background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
-          border: 'none', borderRadius: 18, padding: '16px', cursor: 'pointer',
+        <button onClick={saveSettings} disabled={settingsSaving} style={{
+          marginTop: 16, width: '100%',
+          background: settingsSaving
+            ? '#a8d5b8'
+            : 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
+          border: 'none', borderRadius: 18, padding: '16px',
+          cursor: settingsSaving ? 'not-allowed' : 'pointer',
           fontSize: zf(18), fontWeight: 900, color: '#fff',
         }}>
-          {t(lang, 'saveSettings')}
+          {settingsSaving
+            ? (lang === 'zh' ? '保存中……' : 'Saving…')
+            : t(lang, 'saveSettings')}
         </button>
 
         {/* change role */}
