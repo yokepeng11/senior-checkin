@@ -172,6 +172,22 @@ export default function SeniorHome() {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [loadData]);
 
+  // ── Auto-refresh at SGT midnight so date and status update without reload ──
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const scheduleMidnightRefresh = () => {
+      // ms remaining until next midnight in SGT (UTC+8)
+      const sgtNow = Date.now() + 8 * 3_600_000;
+      const msUntilMidnight = Math.ceil(sgtNow / 86_400_000) * 86_400_000 - sgtNow;
+      timer = setTimeout(() => {
+        loadData();            // re-fetches today's status → re-renders with new date
+        scheduleMidnightRefresh(); // arm for next midnight
+      }, msUntilMidnight + 500); // +500ms buffer so the server's day has flipped
+    };
+    scheduleMidnightRefresh();
+    return () => clearTimeout(timer);
+  }, [loadData]);
+
   // ── Push notification status check + auto re-subscribe if already granted ────
   useEffect(() => {
     if (!id) return;
