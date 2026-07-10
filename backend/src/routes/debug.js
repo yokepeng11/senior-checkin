@@ -217,4 +217,64 @@ router.post('/run-alerts', async (req, res) => {
   res.json({ ok: true, missed: missed.length, seniors: missed.map(s => s.name), results });
 });
 
+// ── POST /api/debug/send-push-reminders ──────────────────────────────────────
+// Called by cron-job.org at each preferred check-in time (e.g. 9:00 AM SGT).
+// Sends push reminders to seniors whose preferred time matches current SGT hour.
+router.post('/send-push-reminders', async (req, res) => {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+    return res.status(400).json({ error: 'VAPID keys not configured' });
+  }
+
+  const webpush = require('web-push');
+  webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
+
+  // Current SGT time
+  const now = new Date();
+  const sgtMs = now.getTime() + 8 * 3600000;
+  const sgtDate = new Date(sgtMs);
+  const sgtHour = String(sgtDate.getUTCHours()).padStart(2, '0');
+  const today = sgtDate.toISOString().split('T')[0];
+
+  console.log(`\n🔔 External push-reminder trigger — SGT ${sgtHour}:00 on ${today}`);
+
+  // Find seniors whose preferred time matches this hour and haven't checked in
+  const seniors = db.prepare(`
+    SELECT s.senior_id, s.name FROM seniors s
+    LEFT JOIN daily_status ds ON s.senior_id = ds.senior_id AND ds.date = ?
+    WHERE s.is_active = 1
+      AND substr(s.preferred_checkin_time, 1, 2) = ?
+      AND (ds.checked_in_today IS NULL OR ds.checked_in_today = 0)
+  `).all(today, sgtHour);
+
+  if (seniors.length === 0) {
+    return res.json({ ok: true, message: `No seniors due for a reminder at ${sgtHour}:00 SGT.`, sent: 0 });
+  }
+
+  const results = [];
+  for (const senior of seniors) {
+    const subs = db.prepare('SELECT * FROM push_subscriptions WHERE senior_id = ?').all(senior.senior_id);
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          JSON.stringify({
+            title: `☀️ Good Morning, ${senior.name.split(' ')[0]}!`,
+            body: "It's time to check in. Tap to open the app and press the button.",
+            url: '/',
+          })
+        );
+        results.push({ senior: senior.name, status: 'sent' });
+        console.log(`  ✅ Push sent to ${senior.name}`);
+      } catch (err) {
+        results.push({ senior: senior.name, status: 'failed', error: err.message });
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
+        }
+      }
+    }
+  }
+
+  res.json({ ok: true, sgtHour, seniors: seniors.map(s => s.name), results });
+});
+
 module.exports = router;

@@ -163,6 +163,15 @@ export default function SeniorHome() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // ── Refresh data when app comes back to foreground (fixes stale date/status) ──
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [loadData]);
+
   // ── Push notification status check + auto re-subscribe if already granted ────
   useEffect(() => {
     if (!id) return;
