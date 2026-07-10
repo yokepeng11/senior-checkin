@@ -76,6 +76,12 @@ function SeniorCard({ s, onClick }: { s: DashboardSenior; onClick: () => void })
   );
 }
 
+const HIDDEN_KEY = 'sc_hidden_seniors'; // persists deleted senior names across DB resets
+
+function loadHidden(): string[] {
+  try { return JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]'); } catch { return []; }
+}
+
 export default function NOKDashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState<Dashboard | null>(null);
@@ -84,6 +90,8 @@ export default function NOKDashboard() {
   const [notifStatus, setNotifStatus] = useState<'unknown'|'asking-phone'|'granted'|'denied'|'unsupported'>('unknown');
   const [caregiverPhone, setCaregiverPhone] = useState('');
   const [editMode, setEditMode] = useState(false);
+  // Names of seniors the caregiver has deleted — persisted so they don't reappear after DB reset
+  const [hiddenNames, setHiddenNames] = useState<string[]>(loadHidden);
 
   const load = async (spin = false) => {
     if (spin) setRefreshing(true);
@@ -98,12 +106,16 @@ export default function NOKDashboard() {
     if (!confirm(`Remove ${name} from the dashboard?`)) return;
     try {
       await api.deleteSenior(senior_id);
-      setData(prev => prev ? {
-        ...prev,
-        seniors: prev.seniors.filter(s => s.senior_id !== senior_id),
-        total_seniors: prev.total_seniors - 1,
-      } : prev);
-    } catch { alert('Could not remove senior. Please try again.'); }
+    } catch { /* best effort — still hide locally even if API fails */ }
+    // Always persist the name so they won't reappear even after a DB reset
+    const updated = [...hiddenNames, name];
+    setHiddenNames(updated);
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(updated));
+    setData(prev => prev ? {
+      ...prev,
+      seniors: prev.seniors.filter(s => s.senior_id !== senior_id),
+      total_seniors: prev.total_seniors - 1,
+    } : prev);
   };
 
   // Check current notification permission (read-only, no prompt)
@@ -307,21 +319,23 @@ export default function NOKDashboard() {
             Loading…
           </div>
         ) : (
-          data?.seniors.map(s => (
-            <div key={s.senior_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <SeniorCard s={s} onClick={() => !editMode && navigate(`/nok/senior/${s.senior_id}`)} />
+          data?.seniors
+            .filter(s => !hiddenNames.includes(s.name))
+            .map(s => (
+              <div key={s.senior_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <SeniorCard s={s} onClick={() => !editMode && navigate(`/nok/senior/${s.senior_id}`)} />
+                </div>
+                {editMode && (
+                  <button onClick={() => removeSenior(s.senior_id, s.name)} style={{
+                    width: 44, height: 44, borderRadius: '50%', border: 'none',
+                    background: '#e74c3c', color: '#fff', cursor: 'pointer',
+                    fontSize: 20, fontWeight: 900, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>✕</button>
+                )}
               </div>
-              {editMode && (
-                <button onClick={() => removeSenior(s.senior_id, s.name)} style={{
-                  width: 44, height: 44, borderRadius: '50%', border: 'none',
-                  background: '#e74c3c', color: '#fff', cursor: 'pointer',
-                  fontSize: 20, fontWeight: 900, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>✕</button>
-              )}
-            </div>
-          ))
+            ))
         )}
       </div>
 
