@@ -32,13 +32,18 @@ export default function RoleSelect() {
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
+  const normalisePhone = (raw: string) => {
+    const d = raw.replace(/\D/g, '');
+    // Remove Singapore +65 country code only when it produces an 8-digit local number
+    return (d.startsWith('65') && d.length === 10) ? d.slice(2) : d;
+  };
+
   const confirmCaregiverPhone = () => {
     const raw = phone.trim();
     if (!raw) { setPhoneError('Please enter your phone number.'); return; }
-    // Store the digits only — the backend matches on the last 8 digits regardless of format
-    const digits = raw.replace(/\D/g, '');
-    if (digits.length < 7) { setPhoneError('Please enter a valid phone number.'); return; }
-    localStorage.setItem('sc_caregiver_phone', digits);
+    const normalised = normalisePhone(raw);
+    if (normalised.length < 7) { setPhoneError('Please enter a valid phone number.'); return; }
+    localStorage.setItem('sc_caregiver_phone', normalised);
     localStorage.setItem('sc_role', 'caregiver');
     navigate('/nok', { replace: true });
   };

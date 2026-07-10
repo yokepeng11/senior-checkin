@@ -2,30 +2,31 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// GET /api/dashboard?phone=+6591234567
+// Normalise a phone number to a canonical local form for comparison.
+// Strips all non-digits, then removes the Singapore +65 country code prefix
+// only when it produces a valid 8-digit local number (e.g. "+6591234567" → "91234567").
+// Ambiguous test numbers like "651234567" (9 digits) are kept as-is.
+function normalisePhone(raw) {
+  if (!raw) return '';
+  const d = raw.replace(/\D/g, '');
+  if (d.startsWith('65') && d.length === 10) return d.slice(2);
+  return d;
+}
+
+// GET /api/dashboard?phone=91234567
 // If phone is provided, only return seniors linked to that caregiver phone.
 router.get('/', (req, res) => {
   const today = new Date().toISOString().split('T')[0];
 
   let seniors;
   if (req.query.phone) {
-    // Strip everything except digits, then match on the last 8 digits.
-    // This handles any formatting variation: "+65 9123 4567", "91234567",
-    // "651234567", "+6591234567" all reduce to the same 8-digit suffix.
-    const digits = req.query.phone.replace(/\D/g, '');
-    const last8  = digits.slice(-8);
-    seniors = db.prepare(`
-      SELECT * FROM seniors
-      WHERE is_active = 1
-        AND (
-          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
-            person_in_charge_phone, '+',''), ' ',''), '-',''), '(',''), ')','') LIKE ?
-          OR
-          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
-            next_of_kin_phone, '+',''), ' ',''), '-',''), '(',''), ')','') LIKE ?
-        )
-      ORDER BY name
-    `).all(`%${last8}`, `%${last8}`);
+    const queryPhone = normalisePhone(req.query.phone);
+    // Load all then filter in JS so the normalisation logic is consistent
+    const all = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
+    seniors = all.filter(s =>
+      normalisePhone(s.person_in_charge_phone) === queryPhone ||
+      normalisePhone(s.next_of_kin_phone)      === queryPhone
+    );
   } else {
     seniors = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
   }

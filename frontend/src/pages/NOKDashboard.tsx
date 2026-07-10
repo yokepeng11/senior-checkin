@@ -184,15 +184,20 @@ export default function NOKDashboard() {
     }
   };
 
+  // Normalise to local form: strip non-digits, remove +65 country code only when
+  // it leaves an 8-digit local number (e.g. "6591234567" → "91234567").
+  const normalisePhone = (raw: string) => {
+    const d = raw.replace(/\D/g, '');
+    return (d.startsWith('65') && d.length === 10) ? d.slice(2) : d;
+  };
+
   // Client-side phone filter — belt-and-suspenders in case the backend hasn't deployed yet.
-  // Matches on last 8 digits of the stored caregiver phone.
-  const phoneDigits = storedPhone ? storedPhone.replace(/\D/g, '') : '';
-  const last8 = phoneDigits.slice(-8);
+  const normLogin = normalisePhone(storedPhone || '');
   const phoneFilter = (s: DashboardSenior) => {
-    if (!last8) return true;
-    const pic = (s.person_in_charge_phone || '').replace(/\D/g, '');
-    const nok = (s.next_of_kin_phone || '').replace(/\D/g, '');
-    return pic.endsWith(last8) || nok.endsWith(last8);
+    if (!normLogin) return true;
+    const pic = normalisePhone(s.person_in_charge_phone || '');
+    const nok = normalisePhone(s.next_of_kin_phone || '');
+    return pic === normLogin || nok === normLogin;
   };
 
   // Compute stats from the locally-filtered list so deleted seniors don't inflate the counts
