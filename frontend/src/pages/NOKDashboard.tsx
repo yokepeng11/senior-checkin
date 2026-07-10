@@ -353,9 +353,7 @@ export default function NOKDashboard() {
             Loading…
           </div>
         ) : (
-          data?.seniors
-            .filter(s => !hiddenNames.includes(s.name))
-            .map(s => (
+          visibleSeniors.map(s => (
               <div key={s.senior_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1 }}>
                   <SeniorCard s={s} onClick={() => !editMode && navigate(`/nok/senior/${s.senior_id}`)} />
