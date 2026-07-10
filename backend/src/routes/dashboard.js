@@ -2,10 +2,24 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
-// GET /api/dashboard
+// GET /api/dashboard?phone=+6591234567
+// If phone is provided, only return seniors linked to that caregiver phone.
 router.get('/', (req, res) => {
   const today = new Date().toISOString().split('T')[0];
-  const seniors = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
+
+  let seniors;
+  if (req.query.phone) {
+    let phone = req.query.phone.replace(/[\s\-().]/g, '');
+    if (!phone.startsWith('+')) phone = '+65' + phone;
+    seniors = db.prepare(`
+      SELECT * FROM seniors
+      WHERE is_active = 1
+        AND (person_in_charge_phone = ? OR next_of_kin_phone = ?)
+      ORDER BY name
+    `).all(phone, phone);
+  } else {
+    seniors = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
+  }
 
   const seniorsWithStatus = seniors.map(senior => {
     const status = db.prepare(

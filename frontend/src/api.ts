@@ -115,8 +115,9 @@ export const api = {
     return get<import('./types').CheckinHistory[]>(`/history/${senior_id}?days=${days}`);
   },
 
-  async getDashboard() {
-    return get<import('./types').Dashboard>('/dashboard');
+  async getDashboard(phone?: string) {
+    const path = phone ? `/dashboard?phone=${encodeURIComponent(phone)}` : '/dashboard';
+    return get<import('./types').Dashboard>(path);
   },
 
   async getWeeklyReport(senior_id: string) {

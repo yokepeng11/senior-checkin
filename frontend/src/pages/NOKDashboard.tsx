@@ -88,14 +88,17 @@ export default function NOKDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown'|'asking-phone'|'granted'|'denied'|'unsupported'>('unknown');
-  const [caregiverPhone, setCaregiverPhone] = useState('');
+  // Pre-fill from the phone the caregiver entered at login
+  const [caregiverPhone, setCaregiverPhone] = useState(() => localStorage.getItem('sc_caregiver_phone') || '');
   const [editMode, setEditMode] = useState(false);
   // Names of seniors the caregiver has deleted — persisted so they don't reappear after DB reset
   const [hiddenNames, setHiddenNames] = useState<string[]>(loadHidden);
 
+  const storedPhone = localStorage.getItem('sc_caregiver_phone') || undefined;
+
   const load = async (spin = false) => {
     if (spin) setRefreshing(true);
-    try { setData(await api.getDashboard()); }
+    try { setData(await api.getDashboard(storedPhone)); }
     catch { /* keep stale */ }
     finally { setLoading(false); setRefreshing(false); }
   };
@@ -141,8 +144,14 @@ export default function NOKDashboard() {
     else setNotifStatus('unknown');
   }, []);
 
-  // Step 1 — show phone input first
-  const handleEnableClick = () => setNotifStatus('asking-phone');
+  // Step 1 — if phone already known from login, skip phone input and enable directly
+  const handleEnableClick = () => {
+    if (caregiverPhone) {
+      enableNotifications();
+    } else {
+      setNotifStatus('asking-phone');
+    }
+  };
 
   // Step 2 — called after phone entered and confirmed (iOS user gesture)
   const enableNotifications = async () => {
@@ -356,7 +365,8 @@ export default function NOKDashboard() {
       <div style={{ textAlign: 'center', padding: '8px 18px 28px' }}>
         <button onClick={() => {
           localStorage.removeItem('sc_role');
-          navigate('/');
+          localStorage.removeItem('sc_caregiver_phone');
+          navigate('/', { replace: true });
         }} style={{
           border: 'none', background: 'none', cursor: 'pointer',
           fontSize: 13, fontWeight: 700, color: '#b5b0a8',

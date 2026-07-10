@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../LangContext';
 import { t } from '../i18n';
@@ -24,9 +25,98 @@ function SunIcon({ size = 58, color = '#1F9D55' }: { size?: number; color?: stri
 export default function RoleSelect() {
   const navigate = useNavigate();
   const { lang, setLang } = useLang();
-  // Scale font sizes up slightly for Chinese characters
   const zf = (base: number) => Math.round(base * 1.4);
 
+  // 'select' = role choice screen, 'caregiver-phone' = phone entry screen
+  const [step, setStep] = useState<'select' | 'caregiver-phone'>('select');
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  const confirmCaregiverPhone = () => {
+    const raw = phone.trim();
+    if (!raw) { setPhoneError('Please enter your phone number.'); return; }
+    let normalised = raw.replace(/[\s\-().]/g, '');
+    if (!normalised.startsWith('+')) normalised = '+65' + normalised;
+    localStorage.setItem('sc_caregiver_phone', normalised);
+    localStorage.setItem('sc_role', 'caregiver');
+    navigate('/nok', { replace: true });
+  };
+
+  // ── Phone entry step ──────────────────────────────────────────────────────
+  if (step === 'caregiver-phone') {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#e7e5df',
+        fontFamily: "'Nunito', sans-serif",
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px',
+      }}>
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          {/* Back */}
+          <button onClick={() => { setStep('select'); setPhoneError(''); }} style={{
+            border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: 15, fontWeight: 700, color: '#8a857c',
+            fontFamily: "'Nunito', sans-serif", marginBottom: 28, padding: 0,
+          }}>← Back</button>
+
+          {/* Icon */}
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 72, height: 72, borderRadius: 22,
+              background: 'linear-gradient(135deg, #2E75B6, #1a5490)',
+              boxShadow: '0 12px 28px rgba(46,117,182,0.3)',
+              marginBottom: 16, fontSize: 34,
+            }}>👨‍👩‍👧</div>
+            <div style={{ fontSize: zf(26), fontWeight: 900, color: '#1F2421' }}>
+              Caregiver / NOK
+            </div>
+            <div style={{ fontSize: zf(15), fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
+              Enter your phone number so we can link you to your seniors.
+            </div>
+          </div>
+
+          {/* Phone input */}
+          <div style={{ background: '#fff', borderRadius: 20, padding: '22px 20px', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' }}>
+            <label style={{ display: 'block', fontSize: zf(14), fontWeight: 800, color: '#1F2421', marginBottom: 10 }}>
+              Mobile Number
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => { setPhone(e.target.value); setPhoneError(''); }}
+              onKeyDown={e => e.key === 'Enter' && confirmCaregiverPhone()}
+              placeholder="+65 9123 4567"
+              style={{
+                width: '100%', border: phoneError ? '2px solid #e74c3c' : '2px solid #e8e6e2',
+                borderRadius: 14, padding: '14px 16px',
+                fontSize: zf(18), fontWeight: 700, fontFamily: "'Nunito', sans-serif",
+                color: '#1F2421', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+            {phoneError && (
+              <div style={{ color: '#e74c3c', fontSize: 13, fontWeight: 700, marginTop: 8 }}>{phoneError}</div>
+            )}
+
+            <button onClick={confirmCaregiverPhone} style={{
+              width: '100%', marginTop: 18,
+              background: 'linear-gradient(135deg, #2E75B6, #1a5490)',
+              border: 'none', borderRadius: 16, padding: '16px',
+              fontSize: zf(17), fontWeight: 900, color: '#fff',
+              fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+            }}>
+              Open Dashboard →
+            </button>
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, fontWeight: 600, color: '#b5b0a8' }}>
+            Your number is only used to match you to the seniors you care for.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Role select step ──────────────────────────────────────────────────────
   return (
     <div style={{
       minHeight: '100vh',
@@ -111,8 +201,15 @@ export default function RoleSelect() {
         {/* NOK button */}
         <button
           onClick={() => {
-            localStorage.setItem('sc_role', 'caregiver');
-            navigate('/nok');
+            // Returning caregiver — phone already stored, go straight in
+            const savedPhone = localStorage.getItem('sc_caregiver_phone');
+            if (savedPhone) {
+              localStorage.setItem('sc_role', 'caregiver');
+              navigate('/nok', { replace: true });
+            } else {
+              // New caregiver — ask for phone first
+              setStep('caregiver-phone');
+            }
           }}
           style={{
             width: '100%', background: '#fff', border: 'none',
