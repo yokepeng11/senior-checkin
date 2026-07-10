@@ -464,7 +464,7 @@ export default function SeniorHome() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               }}
             >
-              {navigator.share ? '↗' : '📋'}
+              {'share' in navigator ? '↗' : '📋'}
             </button>
           </div>
         </div>
