@@ -130,21 +130,21 @@ function scheduleSMSAlerts() {
       await sendWhatsApp(phone, msg, group[0].senior_id);
     }
 
-    // Push to matched caregiver devices only (by phone number)
-    const byPhone = {};
-    missed.forEach(s => {
-      let phone = (s.person_in_charge_phone || s.next_of_kin_phone || '').replace(/[\s\-().]/g, '');
-      if (!phone) return;
-      if (!phone.startsWith('+')) phone = '+65' + phone;
-      if (!byPhone[phone]) byPhone[phone] = [];
-      byPhone[phone].push(s);
-    });
+    // Push to matched caregiver devices via caregiver_senior_links
+    const byCaregiver = {};
+    for (const senior of missed) {
+      const links = db.prepare('SELECT caregiver_phone FROM caregiver_senior_links WHERE senior_id = ?').all(senior.senior_id);
+      for (const link of links) {
+        if (!byCaregiver[link.caregiver_phone]) byCaregiver[link.caregiver_phone] = [];
+        byCaregiver[link.caregiver_phone].push(senior);
+      }
+    }
 
-    for (const [phone, group] of Object.entries(byPhone)) {
-      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(phone);
+    for (const [caregiverId, group] of Object.entries(byCaregiver)) {
+      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(caregiverId);
       if (subs.length === 0) continue;
       const names = group.map(s => s.name).join(', ');
-      console.log(`\n🔔 Pushing to caregiver ${phone} — ${names}`);
+      console.log(`\n🔔 Pushing to caregiver ${caregiverId} — ${names}`);
       for (const sub of subs) {
         await sendPush(sub, {
           title: `⚠️ ${group.length} senior${group.length > 1 ? 's have' : ' has'} not checked in`,
