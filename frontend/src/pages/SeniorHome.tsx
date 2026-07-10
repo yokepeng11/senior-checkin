@@ -108,8 +108,6 @@ export default function SeniorHome() {
   const [pressing, setPressing] = useState(false);
   const [prefIdx, setPrefIdx] = useState(2); // default 9:00 AM
   const [settingsName, setSettingsName] = useState('');
-  const [settingsNokName, setSettingsNokName] = useState('');
-  const [settingsNokPhone, setSettingsNokPhone] = useState('');
   const [notifStatus, setNotifStatus] = useState<'unknown'|'granted'|'denied'|'unsupported'>('unknown');
   const [notifLoading, setNotifLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
@@ -126,8 +124,6 @@ export default function SeniorHome() {
       setSenior(s);
       setStatus(st);
       setSettingsName(s.name || '');
-      setSettingsNokName(s.person_in_charge_name || '');
-      setSettingsNokPhone(s.person_in_charge_phone || '');
       // init time picker from saved setting
       const savedTime = s.preferred_checkin_time; // "09:00"
       const [h] = (savedTime || '09:00').split(':').map(Number);
@@ -308,28 +304,17 @@ export default function SeniorHome() {
       return `${String(h).padStart(2, '0')}:00`;
     })();
 
-    // Update localStorage FIRST so the recovery code always uses the
-    // latest phone number the senior typed — even if the API call fails
     localStorage.setItem('sc_senior_profile', JSON.stringify({
       name: settingsName,
-      nokName: settingsNokName,
-      nokPhone: settingsNokPhone,
       prefTime: h24,
     }));
 
     try {
       await api.updateSenior(id, {
         name: settingsName,
-        person_in_charge_name: settingsNokName,
-        person_in_charge_phone: settingsNokPhone,
         preferred_checkin_time: h24,
       });
-      setSenior(prev => prev ? {
-        ...prev,
-        name: settingsName,
-        person_in_charge_name: settingsNokName,
-        person_in_charge_phone: settingsNokPhone,
-      } : prev);
+      setSenior(prev => prev ? { ...prev, name: settingsName } : prev);
       setSettingsSaving(false);
       setScreen('main');
     } catch {
@@ -482,18 +467,6 @@ export default function SeniorHome() {
               {navigator.share ? '↗' : '📋'}
             </button>
           </div>
-        </div>
-
-        {/* caregiver */}
-        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
-          color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'caregiverNok')}</div>
-        <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'caregiverName')}</div>
-          <input style={{ ...inputSt, marginBottom: 14 }} value={settingsNokName}
-            onChange={e => { setSettingsNokName(e.target.value); setSettingsError(''); }} placeholder={t(lang, 'caregiverName')} />
-          <div style={{ fontSize: zf(14), fontWeight: 700, color: '#8a8f8b', marginBottom: 6 }}>{t(lang, 'contactNumber')}</div>
-          <input style={inputSt} value={settingsNokPhone} type="tel"
-            onChange={e => { setSettingsNokPhone(e.target.value); setSettingsError(''); }} placeholder="+65 9123 4567" />
         </div>
 
         {/* notifications */}
