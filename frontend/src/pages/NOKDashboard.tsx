@@ -184,8 +184,19 @@ export default function NOKDashboard() {
     }
   };
 
+  // Client-side phone filter — belt-and-suspenders in case the backend hasn't deployed yet.
+  // Matches on last 8 digits of the stored caregiver phone.
+  const phoneDigits = storedPhone ? storedPhone.replace(/\D/g, '') : '';
+  const last8 = phoneDigits.slice(-8);
+  const phoneFilter = (s: DashboardSenior) => {
+    if (!last8) return true;
+    const pic = (s.person_in_charge_phone || '').replace(/\D/g, '');
+    const nok = (s.next_of_kin_phone || '').replace(/\D/g, '');
+    return pic.endsWith(last8) || nok.endsWith(last8);
+  };
+
   // Compute stats from the locally-filtered list so deleted seniors don't inflate the counts
-  const visibleSeniors = (data?.seniors ?? []).filter(s => !hiddenNames.includes(s.name));
+  const visibleSeniors = (data?.seniors ?? []).filter(s => !hiddenNames.includes(s.name)).filter(phoneFilter);
   const totalVisible    = visibleSeniors.length;
   const checkedInVisible = visibleSeniors.filter(s => s.today_status.checked_in).length;
   const pendingVisible  = totalVisible - checkedInVisible;
