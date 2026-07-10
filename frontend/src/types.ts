@@ -11,6 +11,7 @@ export interface Senior {
   next_of_kin_email?: string;
   is_active: number;
   created_at?: string;
+  invite_code?: string;
 }
 
 export interface DailyStatus {

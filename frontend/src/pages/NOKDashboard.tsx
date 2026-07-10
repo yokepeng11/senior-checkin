@@ -88,11 +88,16 @@ export default function NOKDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [notifStatus, setNotifStatus] = useState<'unknown'|'asking-phone'|'granted'|'denied'|'unsupported'>('unknown');
-  // Pre-fill from the phone the caregiver entered at login
   const [caregiverPhone, setCaregiverPhone] = useState(() => localStorage.getItem('sc_caregiver_phone') || '');
   const [editMode, setEditMode] = useState(false);
-  // Names of seniors the caregiver has deleted — persisted so they don't reappear after DB reset
   const [hiddenNames, setHiddenNames] = useState<string[]>(loadHidden);
+
+  // Add-senior invite-code flow
+  const [addStep, setAddStep] = useState<'idle'|'enter-code'|'confirm'>('idle');
+  const [codeInput, setCodeInput] = useState('');
+  const [codeResult, setCodeResult] = useState<{ senior_id: string; name: string } | null>(null);
+  const [codeError, setCodeError] = useState('');
+  const [codeLinking, setCodeLinking] = useState(false);
 
   const storedPhone = localStorage.getItem('sc_caregiver_phone') || undefined;
 
@@ -119,19 +124,43 @@ export default function NOKDashboard() {
   }, []);
 
   const removeSenior = async (senior_id: string, name: string) => {
-    if (!confirm(`Remove ${name} from the dashboard?`)) return;
+    if (!confirm(`Remove ${name} from your dashboard?`)) return;
     try {
-      await api.deleteSenior(senior_id);
-    } catch { /* best effort — still hide locally even if API fails */ }
-    // Always persist the name so they won't reappear even after a DB reset
+      if (storedPhone) await api.unlinkCaregiverFromSenior(storedPhone, senior_id);
+    } catch { /* still hide locally */ }
     const updated = [...hiddenNames, name];
     setHiddenNames(updated);
     localStorage.setItem(HIDDEN_KEY, JSON.stringify(updated));
-    setData(prev => prev ? {
-      ...prev,
-      seniors: prev.seniors.filter(s => s.senior_id !== senior_id),
-      total_seniors: prev.total_seniors - 1,
-    } : prev);
+    setData(prev => prev ? { ...prev, seniors: prev.seniors.filter(s => s.senior_id !== senior_id) } : prev);
+  };
+
+  // ── Invite-code linking ───────────────────────────────────────────────────
+  const findSeniorByCode = async () => {
+    const code = codeInput.trim().toUpperCase();
+    if (code.length < 4) { setCodeError('Please enter the 6-character code.'); return; }
+    setCodeError('');
+    setCodeLinking(true);
+    try {
+      const result = await api.getSeniorByCode(code);
+      setCodeResult(result);
+      setAddStep('confirm');
+    } catch {
+      setCodeError('Code not found. Please check with your senior.');
+    } finally { setCodeLinking(false); }
+  };
+
+  const confirmLink = async () => {
+    if (!codeResult || !storedPhone) return;
+    setCodeLinking(true);
+    try {
+      await api.linkCaregiverToSenior(storedPhone, codeInput.trim().toUpperCase());
+      setAddStep('idle');
+      setCodeInput('');
+      setCodeResult(null);
+      await load();
+    } catch {
+      setCodeError('Failed to link. Please try again.');
+    } finally { setCodeLinking(false); }
   };
 
   // Check current notification permission (read-only, no prompt)
@@ -184,24 +213,9 @@ export default function NOKDashboard() {
     }
   };
 
-  // Normalise to local form: strip non-digits, remove +65 country code only when
-  // it leaves an 8-digit local number (e.g. "6591234567" → "91234567").
-  const normalisePhone = (raw: string) => {
-    const d = raw.replace(/\D/g, '');
-    return (d.startsWith('65') && d.length === 10) ? d.slice(2) : d;
-  };
-
-  // Client-side phone filter — belt-and-suspenders in case the backend hasn't deployed yet.
-  const normLogin = normalisePhone(storedPhone || '');
-  const phoneFilter = (s: DashboardSenior) => {
-    if (!normLogin) return true;
-    const pic = normalisePhone(s.person_in_charge_phone || '');
-    const nok = normalisePhone(s.next_of_kin_phone || '');
-    return pic === normLogin || nok === normLogin;
-  };
-
-  // Compute stats from the locally-filtered list so deleted seniors don't inflate the counts
-  const visibleSeniors = (data?.seniors ?? []).filter(s => !hiddenNames.includes(s.name)).filter(phoneFilter);
+  // Backend now filters by caregiver_senior_links — no client-side phone filter needed.
+  // hiddenNames is kept as a local safety net for soft-deleted seniors.
+  const visibleSeniors = (data?.seniors ?? []).filter(s => !hiddenNames.includes(s.name));
   const totalVisible    = visibleSeniors.length;
   const checkedInVisible = visibleSeniors.filter(s => s.today_status.checked_in).length;
   const pendingVisible  = totalVisible - checkedInVisible;
@@ -222,6 +236,12 @@ export default function NOKDashboard() {
             <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>{today}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 36 }}>
+            {/* Add senior via invite code */}
+            <button onClick={() => { setAddStep('enter-code'); setCodeInput(''); setCodeError(''); setCodeResult(null); }} style={{
+              width: 44, height: 44, borderRadius: '50%',
+              background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
+              cursor: 'pointer', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>＋</button>
             <button onClick={() => setEditMode(e => !e)} style={{
               width: 44, height: 44, borderRadius: '50%',
               background: editMode ? 'rgba(220,50,50,0.5)' : 'rgba(255,255,255,0.18)',
@@ -357,6 +377,19 @@ export default function NOKDashboard() {
           <div style={{ textAlign: 'center', padding: 40, color: '#9aa09c', fontSize: 16, fontWeight: 600 }}>
             Loading…
           </div>
+        ) : visibleSeniors.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '36px 20px' }}>
+            <div style={{ fontSize: 52, marginBottom: 14 }}>👥</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#1F2421', marginBottom: 8 }}>No seniors linked yet</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c', marginBottom: 24, lineHeight: 1.6 }}>
+              Ask your senior to open their app → Settings → Invite Code, then tap ＋ above to link them.
+            </div>
+            <button onClick={() => { setAddStep('enter-code'); setCodeInput(''); setCodeError(''); setCodeResult(null); }} style={{
+              border: 'none', borderRadius: 16, padding: '14px 28px', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #2E75B6, #1a5490)',
+              fontSize: 16, fontWeight: 900, color: '#fff', fontFamily: "'Nunito', sans-serif",
+            }}>＋ Add Senior</button>
+          </div>
         ) : (
           visibleSeniors.map(s => (
               <div key={s.senior_id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -391,6 +424,81 @@ export default function NOKDashboard() {
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* ── Invite-code modal ── */}
+      {addStep !== 'idle' && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 100,
+        }} onClick={() => setAddStep('idle')}>
+          <div style={{
+            background: '#fff', borderRadius: '24px 24px 0 0', padding: '28px 24px 48px',
+            width: '100%', maxWidth: 480,
+          }} onClick={e => e.stopPropagation()}>
+
+            {addStep === 'enter-code' && <>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421', marginBottom: 8 }}>
+                🔗 Link a Senior
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c', marginBottom: 20, lineHeight: 1.6 }}>
+                Ask your senior to go to Settings → Invite Code in their app, then enter it here.
+              </div>
+              <input
+                type="text"
+                value={codeInput}
+                onChange={e => { setCodeInput(e.target.value.toUpperCase()); setCodeError(''); }}
+                onKeyDown={e => e.key === 'Enter' && findSeniorByCode()}
+                placeholder="e.g. AH7K2M"
+                maxLength={6}
+                autoFocus
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  border: codeError ? '2px solid #e74c3c' : '2px solid #e8e6e2',
+                  borderRadius: 14, padding: '16px 18px',
+                  fontSize: 28, fontWeight: 900, letterSpacing: '8px', textAlign: 'center',
+                  fontFamily: 'monospace', color: '#1F9D55', outline: 'none',
+                }}
+              />
+              {codeError && <div style={{ color: '#e74c3c', fontSize: 13, fontWeight: 700, marginTop: 8 }}>{codeError}</div>}
+              <button onClick={findSeniorByCode} disabled={codeLinking} style={{
+                width: '100%', marginTop: 16, border: 'none', borderRadius: 16, padding: '16px',
+                background: codeLinking ? '#c8e6d4' : 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
+                fontSize: 17, fontWeight: 900, color: '#fff', fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+              }}>
+                {codeLinking ? 'Searching…' : 'Find Senior →'}
+              </button>
+            </>}
+
+            {addStep === 'confirm' && codeResult && <>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#1F2421', marginBottom: 8 }}>
+                ✅ Senior found!
+              </div>
+              <div style={{ background: '#f0f7f3', borderRadius: 16, padding: '18px 20px', marginBottom: 20 }}>
+                <div style={{ fontSize: 20, fontWeight: 900, color: '#1F9D55' }}>{codeResult.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c', marginTop: 4 }}>Code: {codeInput}</div>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#9aa09c', marginBottom: 20 }}>
+                Link this senior to your dashboard?
+              </div>
+              {codeError && <div style={{ color: '#e74c3c', fontSize: 13, fontWeight: 700, marginBottom: 12 }}>{codeError}</div>}
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button onClick={() => setAddStep('enter-code')} style={{
+                  flex: 1, border: '2px solid #e8e6e2', borderRadius: 16, padding: '14px',
+                  background: '#fff', fontSize: 16, fontWeight: 800, color: '#9aa09c',
+                  fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+                }}>Back</button>
+                <button onClick={confirmLink} disabled={codeLinking} style={{
+                  flex: 2, border: 'none', borderRadius: 16, padding: '14px',
+                  background: codeLinking ? '#c8e6d4' : 'linear-gradient(135deg, #2E75B6, #1a5490)',
+                  fontSize: 16, fontWeight: 900, color: '#fff', fontFamily: "'Nunito', sans-serif", cursor: 'pointer',
+                }}>
+                  {codeLinking ? 'Linking…' : 'Confirm Link ✓'}
+                </button>
+              </div>
+            </>}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

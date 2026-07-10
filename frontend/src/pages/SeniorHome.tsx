@@ -444,6 +444,46 @@ export default function SeniorHome() {
           </div>
         </div>
 
+        {/* invite code */}
+        <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
+          color: '#9aa09c', margin: '20px 6px 10px' }}>
+          {lang === 'zh' ? '邀请码' : 'Invite Code'}
+        </div>
+        <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: zf(13), fontWeight: 600, color: '#9aa09c', marginBottom: 12, lineHeight: 1.5 }}>
+            {lang === 'zh'
+              ? '把这个码告诉你的看护人，他们输入后就能在应用里看到你的打卡状态。'
+              : 'Share this code with your caregiver. They enter it in their app to see your check-in status.'}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              flex: 1, background: '#f0f7f3', borderRadius: 14, padding: '14px 18px',
+              fontSize: zf(28), fontWeight: 900, color: '#1F9D55', letterSpacing: '6px',
+              textAlign: 'center', fontFamily: 'monospace',
+            }}>
+              {senior?.invite_code ?? '……'}
+            </div>
+            <button
+              onClick={() => {
+                if (senior?.invite_code) {
+                  if (navigator.share) {
+                    navigator.share({ text: `My check-in app invite code: ${senior.invite_code}` });
+                  } else {
+                    navigator.clipboard?.writeText(senior.invite_code);
+                  }
+                }
+              }}
+              style={{
+                width: 52, height: 52, borderRadius: 14, border: 'none', cursor: 'pointer',
+                background: '#1F9D55', color: '#fff', fontSize: 22,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}
+            >
+              {navigator.share ? '↗' : '📋'}
+            </button>
+          </div>
+        </div>
+
         {/* caregiver */}
         <div style={{ fontSize: zf(13), fontWeight: 800, letterSpacing: '0.6px', textTransform: 'uppercase',
           color: '#9aa09c', margin: '20px 6px 10px' }}>{t(lang, 'caregiverNok')}</div>

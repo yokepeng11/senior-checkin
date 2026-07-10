@@ -14,6 +14,7 @@ app.use(express.json());
 
 // API routes
 app.use('/api/seniors', require('./routes/seniors'));
+app.use('/api/caregivers', require('./routes/caregivers'));
 app.use('/api', require('./routes/checkin'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/push', require('./routes/push'));

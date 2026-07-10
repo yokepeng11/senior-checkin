@@ -77,9 +77,51 @@ db.exec(`
   );
 `);
 
-// Add push_reminder_sent column to existing DBs that pre-date this migration
-try {
-  db.exec('ALTER TABLE daily_status ADD COLUMN push_reminder_sent INTEGER DEFAULT 0');
-} catch { /* column already exists — safe to ignore */ }
+// ── Migrations ────────────────────────────────────────────────────────────────
+try { db.exec('ALTER TABLE daily_status ADD COLUMN push_reminder_sent INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE seniors ADD COLUMN invite_code TEXT UNIQUE'); } catch {}
+
+// New table: many-to-many caregiver ↔ senior links (replaces phone matching)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS caregiver_senior_links (
+    link_id       TEXT PRIMARY KEY,
+    senior_id     TEXT NOT NULL REFERENCES seniors(senior_id),
+    caregiver_phone TEXT NOT NULL,
+    linked_at     TEXT DEFAULT (datetime('now')),
+    UNIQUE(senior_id, caregiver_phone)
+  );
+`);
+
+// Generate invite codes for any seniors that don't have one yet
+const { randomUUID: _uuid } = require('crypto');
+const { normalisePhone: _norm } = require('./phoneUtils');
+
+function _genCode() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L
+  let c = '';
+  for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return c;
+}
+
+const _noCode = db.prepare('SELECT senior_id FROM seniors WHERE invite_code IS NULL').all();
+for (const s of _noCode) {
+  let code;
+  do { code = _genCode(); }
+  while (db.prepare('SELECT 1 FROM seniors WHERE invite_code = ?').get(code));
+  db.prepare('UPDATE seniors SET invite_code = ? WHERE senior_id = ?').run(code, s.senior_id);
+}
+
+// Auto-migrate existing person_in_charge_phone links into caregiver_senior_links
+const _existing = db.prepare('SELECT senior_id, person_in_charge_phone, next_of_kin_phone FROM seniors WHERE is_active = 1').all();
+for (const s of _existing) {
+  for (const raw of [s.person_in_charge_phone, s.next_of_kin_phone]) {
+    const phone = _norm(raw || '');
+    if (!phone) continue;
+    try {
+      db.prepare('INSERT OR IGNORE INTO caregiver_senior_links (link_id, senior_id, caregiver_phone) VALUES (?, ?, ?)')
+        .run(_uuid(), s.senior_id, phone);
+    } catch {}
+  }
+}
 
 module.exports = db;

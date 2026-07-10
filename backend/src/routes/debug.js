@@ -176,20 +176,20 @@ router.post('/run-alerts', async (req, res) => {
     const webpush = require('web-push');
     webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 
-    // Group missed seniors by their normalised caregiver phone
-    const byPhone = {};
-    missed.forEach(s => {
-      const phone = normalisePhone(s.person_in_charge_phone || s.next_of_kin_phone || '');
-      if (!phone) return;
-      if (!byPhone[phone]) byPhone[phone] = [];
-      byPhone[phone].push(s);
-    });
+    // For each missed senior, find all linked caregivers and push to their devices
+    // Group by caregiver phone so each caregiver gets ONE notification listing all their missed seniors
+    const caregiverMissed = {};
+    for (const senior of missed) {
+      const links = db.prepare('SELECT caregiver_phone FROM caregiver_senior_links WHERE senior_id = ?').all(senior.senior_id);
+      for (const link of links) {
+        if (!caregiverMissed[link.caregiver_phone]) caregiverMissed[link.caregiver_phone] = [];
+        caregiverMissed[link.caregiver_phone].push(senior);
+      }
+    }
 
-    for (const [phone, group] of Object.entries(byPhone)) {
-      // Find caregiver devices registered with this phone number
+    for (const [phone, group] of Object.entries(caregiverMissed)) {
       const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(phone);
       if (subs.length === 0) continue;
-
       const names = group.map(s => s.name).join(', ');
       for (const sub of subs) {
         try {
@@ -201,9 +201,9 @@ router.post('/run-alerts', async (req, res) => {
               url: '/nok',
             })
           );
-          results.push.push({ phone, status: 'sent', seniors: names });
+          results.push({ phone, status: 'sent', seniors: names });
         } catch (err) {
-          results.push.push({ phone, status: 'failed', error: err.message });
+          results.push({ phone, status: 'failed', error: err.message });
           if (err.statusCode === 404 || err.statusCode === 410) {
             db.prepare('DELETE FROM caregiver_push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
           }

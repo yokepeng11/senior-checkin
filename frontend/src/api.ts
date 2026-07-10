@@ -120,6 +120,26 @@ export const api = {
     return get<import('./types').Dashboard>(path);
   },
 
+  async getSeniorByCode(code: string) {
+    return get<{ senior_id: string; name: string }>(`/caregivers/senior-by-code/${encodeURIComponent(code)}`);
+  },
+
+  async linkCaregiverToSenior(caregiver_phone: string, invite_code: string) {
+    return post<{ ok: boolean; senior_id: string; senior_name: string }>(
+      '/caregivers/link', { caregiver_phone, invite_code }
+    );
+  },
+
+  async unlinkCaregiverFromSenior(caregiver_phone: string, senior_id: string) {
+    const r = await fetch(`${BASE}/caregivers/link`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ caregiver_phone, senior_id }),
+    });
+    if (!r.ok) throw new Error(`API error ${r.status}`);
+    return r.json();
+  },
+
   async getWeeklyReport(senior_id: string) {
     return get<import('./types').Report>(`/dashboard/reports/weekly/${senior_id}`);
   },

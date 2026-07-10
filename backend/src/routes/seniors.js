@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+function genInviteCode() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i = 0; i < 6; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  return c;
+}
+
 // GET /api/seniors
 router.get('/', (req, res) => {
   const seniors = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
@@ -26,15 +33,19 @@ router.post('/', (req, res) => {
   if (!name) return res.status(400).json({ error: 'name is required' });
 
   const senior_id = `S${String(Date.now()).slice(-6)}`;
+  let invite_code;
+  do { invite_code = genInviteCode(); }
+  while (db.prepare('SELECT 1 FROM seniors WHERE invite_code = ?').get(invite_code));
+
   db.prepare(`
     INSERT INTO seniors
       (senior_id, name, phone_number, preferred_checkin_time,
        person_in_charge_name, person_in_charge_phone, person_in_charge_email,
-       nok_name, next_of_kin_phone, next_of_kin_email)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       nok_name, next_of_kin_phone, next_of_kin_email, invite_code)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(senior_id, name, phone_number, preferred_checkin_time,
     person_in_charge_name, person_in_charge_phone, person_in_charge_email,
-    nok_name, next_of_kin_phone, next_of_kin_email);
+    nok_name, next_of_kin_phone, next_of_kin_email, invite_code);
 
   res.status(201).json(db.prepare('SELECT * FROM seniors WHERE senior_id = ?').get(senior_id));
 });

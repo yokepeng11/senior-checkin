@@ -11,12 +11,13 @@ router.get('/', (req, res) => {
   let seniors;
   if (req.query.phone) {
     const queryPhone = normalisePhone(req.query.phone);
-    // Load all then filter in JS so the normalisation logic is consistent
-    const all = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
-    seniors = all.filter(s =>
-      normalisePhone(s.person_in_charge_phone) === queryPhone ||
-      normalisePhone(s.next_of_kin_phone)      === queryPhone
-    );
+    // Return only seniors the caregiver has explicitly linked via invite code
+    seniors = db.prepare(`
+      SELECT s.* FROM seniors s
+      INNER JOIN caregiver_senior_links csl ON s.senior_id = csl.senior_id
+      WHERE s.is_active = 1 AND csl.caregiver_phone = ?
+      ORDER BY s.name
+    `).all(queryPhone);
   } else {
     seniors = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
   }
