@@ -37,16 +37,12 @@ export default function SeniorSetup() {
   const { lang, setLang } = useLang();
   const zf = (base: number) => Math.round(base * 1.4);
   const [name, setName] = useState('');
-  const [nokName, setNokName] = useState('');
-  const [nokPhone, setNokPhone] = useState('');
   const [prefIdx, setPrefIdx] = useState(2);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const handleSave = async () => {
     if (!name.trim()) { setError(t(lang, 'errName')); return; }
-    if (!nokName.trim()) { setError(t(lang, 'errNokName')); return; }
-    if (!nokPhone.trim()) { setError(t(lang, 'errNokPhone')); return; }
 
     setSaving(true);
     setError('');
@@ -64,16 +60,12 @@ export default function SeniorSetup() {
       const created = await api.createSenior({
         name: name.trim(),
         phone_number: '',
-        person_in_charge_name: nokName.trim(),
-        person_in_charge_phone: nokPhone.trim(),
         preferred_checkin_time: h24,
       });
-      // Save full profile so the app can silently recover if backend resets
+      // Save profile so the app can silently recover if backend resets
       localStorage.setItem('sc_senior_id', created.senior_id);
       localStorage.setItem('sc_senior_profile', JSON.stringify({
         name: name.trim(),
-        nokName: nokName.trim(),
-        nokPhone: nokPhone.trim(),
         prefTime: h24,
       }));
       navigate(`/senior/${created.senior_id}`, { replace: true });
@@ -128,7 +120,9 @@ export default function SeniorSetup() {
             {t(lang, 'welcome')}
           </div>
           <div style={{ fontSize: zf(16), fontWeight: 600, color: '#8a857c', marginTop: 6 }}>
-            {t(lang, 'welcomeSub')}
+            {lang === 'zh'
+              ? '只需填写您的名字，即可开始每日打卡。'
+              : 'Just enter your name to get started. Your caregiver will link to you using an invite code.'}
           </div>
         </div>
 
@@ -156,7 +150,7 @@ export default function SeniorSetup() {
           {t(lang, 'dailyCheckinTime')}
         </div>
         <div style={{ background: '#fff', borderRadius: 22,
-          padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 16 }}>
+          padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 24 }}>
           <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 14 }}>
             {t(lang, 'preferredCheckinTime')}
           </div>
@@ -178,32 +172,17 @@ export default function SeniorSetup() {
           </div>
         </div>
 
-        {/* Caregiver/NOK */}
-        <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.7px',
-          textTransform: 'uppercase', color: '#9aa09c', margin: '0 4px 10px' }}>
-          {t(lang, 'caregiverNok')}
-        </div>
-        <div style={{ background: '#fff', borderRadius: 22,
-          padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', marginBottom: 24 }}>
-          <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
-            {t(lang, 'caregiverName')}
+        {/* Info banner */}
+        <div style={{
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+          background: '#f0f7f3', borderRadius: 18, padding: '14px 16px', marginBottom: 24,
+        }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>🔗</span>
+          <div style={{ fontSize: 15, fontWeight: 600, color: '#15703C', lineHeight: 1.5 }}>
+            {lang === 'zh'
+              ? '设置完成后，在设置页面查看您的邀请码，分享给看护人即可。'
+              : 'After setup, find your Invite Code in Settings and share it with your caregiver — no phone number needed.'}
           </div>
-          <input
-            style={{ ...inputStyle, marginBottom: 14 }}
-            placeholder={t(lang, 'caregiverNamePlaceholder')}
-            value={nokName}
-            onChange={e => setNokName(e.target.value)}
-          />
-          <div style={{ fontSize: zf(15), fontWeight: 700, color: '#8a8f8b', marginBottom: 8 }}>
-            {t(lang, 'contactNumber')}
-          </div>
-          <input
-            style={inputStyle}
-            placeholder={t(lang, 'contactPlaceholder')}
-            value={nokPhone}
-            onChange={e => setNokPhone(e.target.value)}
-            type="tel"
-          />
         </div>
 
         {/* Error */}
