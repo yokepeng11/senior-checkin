@@ -102,6 +102,19 @@ export default function NOKDashboard() {
 
   useEffect(() => { load(); }, []);
 
+  // Auto-refresh every 60 s so stats stay current without a manual reload
+  useEffect(() => {
+    const interval = setInterval(() => load(), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Also refresh whenever the app comes back to the foreground
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const removeSenior = async (senior_id: string, name: string) => {
     if (!confirm(`Remove ${name} from the dashboard?`)) return;
     try {
@@ -180,7 +193,7 @@ export default function NOKDashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <button onClick={() => navigate('/')} style={{
+            <button onClick={() => { localStorage.removeItem('sc_role'); navigate('/'); }} style={{
               background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
               fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 700,
               padding: '6px 14px', borderRadius: 999, cursor: 'pointer', marginBottom: 14,
