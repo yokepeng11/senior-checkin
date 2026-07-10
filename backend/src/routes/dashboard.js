@@ -1,17 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-
-// Normalise a phone number to a canonical local form for comparison.
-// Strips all non-digits, then removes the Singapore +65 country code prefix
-// only when it produces a valid 8-digit local number (e.g. "+6591234567" → "91234567").
-// Ambiguous test numbers like "651234567" (9 digits) are kept as-is.
-function normalisePhone(raw) {
-  if (!raw) return '';
-  const d = raw.replace(/\D/g, '');
-  if (d.startsWith('65') && d.length === 10) return d.slice(2);
-  return d;
-}
+const { normalisePhone } = require('../phoneUtils');
 
 // GET /api/dashboard?phone=91234567
 // If phone is provided, only return seniors linked to that caregiver phone.

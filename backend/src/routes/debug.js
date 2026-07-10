@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { randomUUID } = require('crypto');
+const { normalisePhone } = require('../phoneUtils');
 
 // ── GET /api/debug/status ─────────────────────────────────────────────────────
 // Returns configuration state and DB counts so we can diagnose issues
@@ -175,12 +176,11 @@ router.post('/run-alerts', async (req, res) => {
     const webpush = require('web-push');
     webpush.setVapidDetails('mailto:admin@feiyue.org.sg', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 
-    // Group missed seniors by their caregiver phone
+    // Group missed seniors by their normalised caregiver phone
     const byPhone = {};
     missed.forEach(s => {
-      let phone = (s.person_in_charge_phone || s.next_of_kin_phone || '').replace(/[\s\-().]/g, '');
+      const phone = normalisePhone(s.person_in_charge_phone || s.next_of_kin_phone || '');
       if (!phone) return;
-      if (!phone.startsWith('+')) phone = '+65' + phone;
       if (!byPhone[phone]) byPhone[phone] = [];
       byPhone[phone].push(s);
     });

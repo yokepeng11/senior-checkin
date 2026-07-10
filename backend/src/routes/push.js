@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { normalisePhone } = require('../phoneUtils');
 
 // POST /api/push/subscribe  — senior device
 router.post('/subscribe', (req, res) => {
@@ -27,12 +28,7 @@ router.post('/caregiver-subscribe', (req, res) => {
   if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
     return res.status(400).json({ error: 'Missing fields' });
   }
-  // Normalise phone
-  let normPhone = null;
-  if (phone) {
-    normPhone = phone.replace(/[\s\-().]/g, '');
-    if (!normPhone.startsWith('+')) normPhone = '+65' + normPhone;
-  }
+  const normPhone = phone ? normalisePhone(phone) : null;
   db.prepare(`
     INSERT INTO caregiver_push_subscriptions (phone, endpoint, p256dh, auth)
     VALUES (?, ?, ?, ?)
