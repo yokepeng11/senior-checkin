@@ -112,6 +112,7 @@ export default function SeniorHome() {
   const [notifLoading, setNotifLoading] = useState(false);
   const [settingsError, setSettingsError] = useState('');
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [showChangeRoleConfirm, setShowChangeRoleConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const TIMES = ['8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM',
@@ -584,17 +585,58 @@ export default function SeniorHome() {
         </button>
 
         {/* change role */}
-        <button onClick={() => {
-          localStorage.removeItem('sc_role');
-          localStorage.removeItem('sc_senior_id');
-          navigate('/');
-        }} style={{
+        <button onClick={() => setShowChangeRoleConfirm(true)} style={{
           marginTop: 12, width: '100%', background: 'none', border: 'none',
           cursor: 'pointer', fontSize: zf(14), fontWeight: 700, color: '#b5b0a8',
           fontFamily: "'Nunito', sans-serif",
         }}>
           {t(lang, 'changeRole')}
         </button>
+
+        {/* change role confirmation modal */}
+        {showChangeRoleConfirm && (
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: 24,
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: 20, padding: '28px 24px 20px',
+              maxWidth: 320, width: '100%', textAlign: 'center',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+            }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>⚠️</div>
+              <div style={{ fontSize: zf(18), fontWeight: 800, color: '#3d3530', marginBottom: 8, fontFamily: "'Nunito', sans-serif" }}>
+                {lang === 'zh' ? '确定要更改身份？' : 'Change role?'}
+              </div>
+              <div style={{ fontSize: zf(14), color: '#7a736b', marginBottom: 24, lineHeight: 1.5, fontFamily: "'Nunito', sans-serif" }}>
+                {lang === 'zh'
+                  ? '这将清除此设备上的所有设置。您需要重新设置才能再次使用应用。'
+                  : 'This will clear all settings on this device. You will need to set up again to use the app.'}
+              </div>
+              <button onClick={() => {
+                localStorage.removeItem('sc_role');
+                localStorage.removeItem('sc_senior_id');
+                navigate('/');
+              }} style={{
+                width: '100%', padding: '13px 0', borderRadius: 12,
+                border: 'none', background: '#e05c3a', color: '#fff',
+                fontSize: zf(15), fontWeight: 800, cursor: 'pointer',
+                fontFamily: "'Nunito', sans-serif", marginBottom: 10,
+              }}>
+                {lang === 'zh' ? '是的，更改身份' : 'Yes, change role'}
+              </button>
+              <button onClick={() => setShowChangeRoleConfirm(false)} style={{
+                width: '100%', padding: '13px 0', borderRadius: 12,
+                border: '2px solid #e8e3dc', background: '#fff', color: '#3d3530',
+                fontSize: zf(15), fontWeight: 800, cursor: 'pointer',
+                fontFamily: "'Nunito', sans-serif",
+              }}>
+                {lang === 'zh' ? '取消' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
