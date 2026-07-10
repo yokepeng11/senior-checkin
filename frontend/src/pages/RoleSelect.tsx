@@ -35,9 +35,10 @@ export default function RoleSelect() {
   const confirmCaregiverPhone = () => {
     const raw = phone.trim();
     if (!raw) { setPhoneError('Please enter your phone number.'); return; }
-    let normalised = raw.replace(/[\s\-().]/g, '');
-    if (!normalised.startsWith('+')) normalised = '+65' + normalised;
-    localStorage.setItem('sc_caregiver_phone', normalised);
+    // Store the digits only — the backend matches on the last 8 digits regardless of format
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 7) { setPhoneError('Please enter a valid phone number.'); return; }
+    localStorage.setItem('sc_caregiver_phone', digits);
     localStorage.setItem('sc_role', 'caregiver');
     navigate('/nok', { replace: true });
   };

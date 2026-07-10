@@ -9,14 +9,23 @@ router.get('/', (req, res) => {
 
   let seniors;
   if (req.query.phone) {
-    let phone = req.query.phone.replace(/[\s\-().]/g, '');
-    if (!phone.startsWith('+')) phone = '+65' + phone;
+    // Strip everything except digits, then match on the last 8 digits.
+    // This handles any formatting variation: "+65 9123 4567", "91234567",
+    // "651234567", "+6591234567" all reduce to the same 8-digit suffix.
+    const digits = req.query.phone.replace(/\D/g, '');
+    const last8  = digits.slice(-8);
     seniors = db.prepare(`
       SELECT * FROM seniors
       WHERE is_active = 1
-        AND (person_in_charge_phone = ? OR next_of_kin_phone = ?)
+        AND (
+          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            person_in_charge_phone, '+',''), ' ',''), '-',''), '(',''), ')','') LIKE ?
+          OR
+          REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+            next_of_kin_phone, '+',''), ' ',''), '-',''), '(',''), ')','') LIKE ?
+        )
       ORDER BY name
-    `).all(phone, phone);
+    `).all(`%${last8}`, `%${last8}`);
   } else {
     seniors = db.prepare('SELECT * FROM seniors WHERE is_active = 1 ORDER BY name').all();
   }
