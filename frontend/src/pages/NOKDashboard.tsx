@@ -121,17 +121,27 @@ export default function NOKDashboard() {
     }
   }, [loading]);
 
-  // Auto-refresh every 60 s so stats stay current without a manual reload
+  // Auto-refresh every 30 s so stats stay current without a manual reload
   useEffect(() => {
-    const interval = setInterval(() => load(), 60_000);
+    const interval = setInterval(() => load(), 30_000);
     return () => clearInterval(interval);
   }, []);
 
-  // Also refresh whenever the app comes back to the foreground
+  // Refresh whenever the app comes back to the foreground.
+  // visibilitychange alone is unreliable on iOS PWAs, so we also listen to
+  // pageshow (fires on back-navigation / app resume) and window focus.
   useEffect(() => {
     const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted || document.visibilityState === 'visible') load(); };
+    const onFocus = () => load();
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const removeSenior = async (senior_id: string, name: string) => {
