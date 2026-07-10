@@ -193,7 +193,7 @@ export default function NOKDashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <button onClick={() => { localStorage.removeItem('sc_role'); navigate('/'); }} style={{
+            <button onClick={() => { localStorage.removeItem('sc_role'); navigate('/', { replace: true }); }} style={{
               background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
               fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 700,
               padding: '6px 14px', borderRadius: 999, cursor: 'pointer', marginBottom: 14,
