@@ -236,12 +236,6 @@ export default function NOKDashboard() {
             <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>{today}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 36 }}>
-            {/* Add senior via invite code */}
-            <button onClick={() => { setAddStep('enter-code'); setCodeInput(''); setCodeError(''); setCodeResult(null); }} style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
-              cursor: 'pointer', fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>＋</button>
             <button onClick={() => setEditMode(e => !e)} style={{
               width: 44, height: 44, borderRadius: '50%',
               background: editMode ? 'rgba(220,50,50,0.5)' : 'rgba(255,255,255,0.18)',
@@ -261,7 +255,7 @@ export default function NOKDashboard() {
         </div>
 
         {/* stats row */}
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
           {[
             { label: 'Total',      value: loading ? '—' : totalVisible,     bg: 'rgba(255,255,255,0.18)' },
             { label: 'Checked In', value: loading ? '—' : checkedInVisible, bg: 'rgba(255,255,255,0.25)' },
@@ -277,6 +271,20 @@ export default function NOKDashboard() {
             </div>
           ))}
         </div>
+
+        {/* Link a senior button */}
+        <button
+          onClick={() => { setAddStep('enter-code'); setCodeInput(''); setCodeError(''); setCodeResult(null); }}
+          style={{
+            width: '100%', border: '2px dashed rgba(255,255,255,0.5)', borderRadius: 18,
+            padding: '14px', cursor: 'pointer', background: 'rgba(255,255,255,0.12)',
+            color: '#fff', fontFamily: "'Nunito', sans-serif",
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>＋</span>
+          <span style={{ fontSize: 16, fontWeight: 800 }}>Link a Senior via Invite Code</span>
+        </button>
       </div>
 
       {/* ── Content ── */}
