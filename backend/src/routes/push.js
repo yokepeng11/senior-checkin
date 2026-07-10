@@ -22,22 +22,23 @@ router.post('/subscribe', (req, res) => {
 });
 
 // POST /api/push/caregiver-subscribe  — caregiver device
-// Body: { phone: "+6582687111", subscription: { endpoint, keys: { p256dh, auth } } }
+// Body: { phone: "+6582687111", device_id: "uuid", subscription: { endpoint, keys: { p256dh, auth } } }
 router.post('/caregiver-subscribe', (req, res) => {
-  const { phone, subscription } = req.body;
+  const { phone, device_id, subscription } = req.body;
   if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
     return res.status(400).json({ error: 'Missing fields' });
   }
   const normPhone = phone ? normalisePhone(phone) : null;
   db.prepare(`
-    INSERT INTO caregiver_push_subscriptions (phone, endpoint, p256dh, auth)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO caregiver_push_subscriptions (phone, device_id, endpoint, p256dh, auth)
+    VALUES (?, ?, ?, ?, ?)
     ON CONFLICT(endpoint) DO UPDATE SET
       phone      = excluded.phone,
+      device_id  = excluded.device_id,
       p256dh     = excluded.p256dh,
       auth       = excluded.auth,
       created_at = datetime('now')
-  `).run(normPhone, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth);
+  `).run(normPhone, device_id || null, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth);
   res.json({ ok: true });
 });
 

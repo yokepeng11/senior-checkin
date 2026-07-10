@@ -79,6 +79,7 @@ db.exec(`
 
 // ── Migrations ────────────────────────────────────────────────────────────────
 try { db.exec('ALTER TABLE daily_status ADD COLUMN push_reminder_sent INTEGER DEFAULT 0'); } catch {}
+try { db.exec('ALTER TABLE caregiver_push_subscriptions ADD COLUMN device_id TEXT'); } catch {}
 // Add invite_code WITHOUT UNIQUE so ALTER TABLE never fails on older SQLite;
 // uniqueness is enforced by the code generation logic instead.
 try { db.exec('ALTER TABLE seniors ADD COLUMN invite_code TEXT'); } catch {}

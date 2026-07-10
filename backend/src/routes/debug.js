@@ -128,14 +128,28 @@ router.post('/run-alerts', async (req, res) => {
   if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM) {
     const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
-    // Group missed seniors by caregiver phone
+    // Group missed seniors by caregiver's real phone number.
+    // Caregivers are linked via device UUID in caregiver_senior_links;
+    // their actual phone is stored in caregiver_push_subscriptions.device_id → phone.
     const grouped = {};
-    missed.forEach(function(s) {
-      const ph = s.person_in_charge_phone || s.next_of_kin_phone;
-      if (!ph) return;
-      if (!grouped[ph]) grouped[ph] = [];
-      grouped[ph].push(s);
-    });
+    for (const s of missed) {
+      const links = db.prepare('SELECT caregiver_phone FROM caregiver_senior_links WHERE senior_id = ?').all(s.senior_id);
+      for (const link of links) {
+        const sub = db.prepare('SELECT phone FROM caregiver_push_subscriptions WHERE device_id = ? AND phone IS NOT NULL LIMIT 1').get(link.caregiver_phone);
+        const ph = (sub && sub.phone) || s.person_in_charge_phone || s.next_of_kin_phone;
+        if (!ph) continue;
+        if (!grouped[ph]) grouped[ph] = [];
+        grouped[ph].push(s);
+      }
+      // Fallback: senior still has person_in_charge_phone but no link yet
+      if (links.length === 0) {
+        const ph = s.person_in_charge_phone || s.next_of_kin_phone;
+        if (ph) {
+          if (!grouped[ph]) grouped[ph] = [];
+          grouped[ph].push(s);
+        }
+      }
+    }
 
     for (const caregiverPhone of Object.keys(grouped)) {
       const group = grouped[caregiverPhone];

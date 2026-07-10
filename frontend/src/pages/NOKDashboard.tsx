@@ -216,7 +216,7 @@ export default function NOKDashboard() {
       await fetch(`${import.meta.env.VITE_API_URL ?? ''}/api/push/caregiver-subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: caregiverPhone.trim(), subscription: { endpoint, keys } }),
+        body: JSON.stringify({ phone: caregiverPhone.trim(), device_id: localStorage.getItem('sc_caregiver_id'), subscription: { endpoint, keys } }),
       });
     } catch (e) {
       console.error('Caregiver push subscribe error:', e);
