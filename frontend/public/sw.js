@@ -1,5 +1,5 @@
 // Service Worker for Senior Check-In push notifications
-// v4 — invite-code system, no caregiver fields on setup/settings
+// v5 — change role confirmation modal
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
