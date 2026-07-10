@@ -237,22 +237,24 @@ router.post('/send-push-reminders', async (req, res) => {
 
   console.log(`\n🔔 External push-reminder trigger — SGT ${sgtHour}:00 on ${today}`);
 
-  // Find seniors whose preferred time matches this hour and haven't checked in
+  // Find seniors whose preferred time matches this hour, not yet reminded, not yet checked in
   const seniors = db.prepare(`
     SELECT s.senior_id, s.name FROM seniors s
     LEFT JOIN daily_status ds ON s.senior_id = ds.senior_id AND ds.date = ?
     WHERE s.is_active = 1
       AND substr(s.preferred_checkin_time, 1, 2) = ?
-      AND (ds.checked_in_today IS NULL OR ds.checked_in_today = 0)
+      AND (ds.checked_in_today  IS NULL OR ds.checked_in_today  = 0)
+      AND (ds.push_reminder_sent IS NULL OR ds.push_reminder_sent = 0)
   `).all(today, sgtHour);
 
   if (seniors.length === 0) {
-    return res.json({ ok: true, message: `No seniors due for a reminder at ${sgtHour}:00 SGT.`, sent: 0 });
+    return res.json({ ok: true, message: `No seniors due for a reminder at ${sgtHour}:00 SGT (already sent or checked in).`, sent: 0 });
   }
 
   const results = [];
   for (const senior of seniors) {
     const subs = db.prepare('SELECT * FROM push_subscriptions WHERE senior_id = ?').all(senior.senior_id);
+    let sent = false;
     for (const sub of subs) {
       try {
         await webpush.sendNotification(
@@ -265,12 +267,20 @@ router.post('/send-push-reminders', async (req, res) => {
         );
         results.push({ senior: senior.name, status: 'sent' });
         console.log(`  ✅ Push sent to ${senior.name}`);
+        sent = true;
       } catch (err) {
         results.push({ senior: senior.name, status: 'failed', error: err.message });
         if (err.statusCode === 404 || err.statusCode === 410) {
           db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(sub.endpoint);
         }
       }
+    }
+    if (sent) {
+      db.prepare(`
+        INSERT INTO daily_status (status_id, senior_id, date, push_reminder_sent)
+        VALUES (?, ?, ?, 1)
+        ON CONFLICT(senior_id, date) DO UPDATE SET push_reminder_sent = 1
+      `).run(randomUUID(), senior.senior_id, today);
     }
   }
 

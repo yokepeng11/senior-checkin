@@ -240,45 +240,54 @@ function schedulePushReminders() {
     return;
   }
 
-  // Run every minute, check which seniors are due for a check-in reminder
+  // Run every minute. Send reminder any time within the 60-minute window
+  // AFTER the senior's preferred time, as long as not already sent today.
+  // This means a Render restart or brief sleep won't cause a missed notification.
   cron.schedule('* * * * *', async () => {
-    // Use Singapore time (UTC+8)
     const now = new Date();
-    const sgtOffset = 8 * 60; // minutes
-    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
-    const sgtMinutes = (utcMinutes + sgtOffset) % (24 * 60);
-    const sgtHour = Math.floor(sgtMinutes / 60);
-    const sgtMin = sgtMinutes % 60;
+    const sgtMs = now.getTime() + 8 * 3_600_000;
+    const sgtDate = new Date(sgtMs);
+    const sgtHour = String(sgtDate.getUTCHours()).padStart(2, '0');
+    const sgtMin  = sgtDate.getUTCMinutes();
+    const today   = sgtDate.toISOString().split('T')[0];
 
-    // Only fire at the top of the hour (minute = 0)
-    if (sgtMin !== 0) return;
+    // Only act during the first 59 minutes of each hour
+    if (sgtMin >= 59) return;
 
-    const hh = String(sgtHour).padStart(2, '0');
-    const today = new Date(now.getTime() + sgtOffset * 60000).toISOString().split('T')[0];
-
-    // Find seniors whose preferred time matches current SGT hour and haven't checked in today
+    // Find seniors whose preferred hour matches and haven't been reminded or checked in today
     const seniors = db.prepare(`
       SELECT s.senior_id, s.name FROM seniors s
       LEFT JOIN daily_status ds ON s.senior_id = ds.senior_id AND ds.date = ?
       WHERE s.is_active = 1
         AND substr(s.preferred_checkin_time, 1, 2) = ?
-        AND (ds.checked_in_today IS NULL OR ds.checked_in_today = 0)
-    `).all(today, hh);
+        AND (ds.checked_in_today  IS NULL OR ds.checked_in_today  = 0)
+        AND (ds.push_reminder_sent IS NULL OR ds.push_reminder_sent = 0)
+    `).all(today, sgtHour);
 
     if (seniors.length === 0) return;
 
-    console.log(`\n🔔 Push reminders — SGT ${hh}:00 — ${seniors.length} senior(s): ${seniors.map(s => s.name).join(', ')}`);
+    console.log(`\n🔔 Push reminders — SGT ${sgtHour}:${String(sgtMin).padStart(2,'0')} — ${seniors.map(s => s.name).join(', ')}`);
 
     for (const senior of seniors) {
-      const subs = db.prepare(
-        'SELECT * FROM push_subscriptions WHERE senior_id = ?'
-      ).all(senior.senior_id);
+      const subs = db.prepare('SELECT * FROM push_subscriptions WHERE senior_id = ?').all(senior.senior_id);
 
+      let sent = false;
       for (const sub of subs) {
         await sendPush(sub, {
           title: `☀️ Good Morning, ${senior.name.split(' ')[0]}!`,
           body: "It's time to check in. Tap to open the app and press the button.",
+          url: '/',
         });
+        sent = true;
+      }
+
+      // Mark reminder as sent so we don't repeat it this hour
+      if (sent) {
+        db.prepare(`
+          INSERT INTO daily_status (status_id, senior_id, date, push_reminder_sent)
+          VALUES (?, ?, ?, 1)
+          ON CONFLICT(senior_id, date) DO UPDATE SET push_reminder_sent = 1
+        `).run(randomUUID(), senior.senior_id, today);
       }
     }
   });

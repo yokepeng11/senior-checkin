@@ -43,6 +43,7 @@ db.exec(`
     date TEXT NOT NULL,
     checked_in_today INTEGER DEFAULT 0,
     last_checkin_time TEXT,
+    push_reminder_sent INTEGER DEFAULT 0,
     FOREIGN KEY (senior_id) REFERENCES seniors(senior_id),
     UNIQUE(senior_id, date)
   );
@@ -75,5 +76,10 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 `);
+
+// Add push_reminder_sent column to existing DBs that pre-date this migration
+try {
+  db.exec('ALTER TABLE daily_status ADD COLUMN push_reminder_sent INTEGER DEFAULT 0');
+} catch { /* column already exists — safe to ignore */ }
 
 module.exports = db;
