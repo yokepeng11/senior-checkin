@@ -193,12 +193,7 @@ export default function NOKDashboard() {
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <button onClick={() => { localStorage.removeItem('sc_role'); navigate('/', { replace: true }); }} style={{
-              background: 'rgba(255,255,255,0.18)', border: 'none', color: '#fff',
-              fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 700,
-              padding: '6px 14px', borderRadius: 999, cursor: 'pointer', marginBottom: 14,
-            }}>← Back</button>
-            <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>Caregiver Dashboard</div>
+<div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>Caregiver Dashboard</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>{today}</div>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 36 }}>
