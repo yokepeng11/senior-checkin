@@ -62,60 +62,63 @@ function SettingsIcon() {
 
 // ── Sunrise landscape illustration (matches the photo) ───────────────────────
 function SunriseLandscape() {
-  const rays = Array.from({ length: 16 }, (_, i) => i * (360 / 16));
+  // Sun peeks from BEHIND the hills — only top arc visible (like a true sunrise)
+  const cx = 195, cy = 370, sr = 62; // sun center & radius
+  const rays = Array.from({ length: 18 }, (_, i) => i * (360 / 18));
   return (
-    <svg width="100%" height="100%" viewBox="0 0 390 520"
+    <svg width="100%" height="100%" viewBox="0 0 390 700"
       preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
       style={{ display: 'block' }}>
       <defs>
-        <radialGradient id="glowA" cx="52%" cy="46%" r="45%">
-          <stop offset="0%"   stopColor="#FFE566" stopOpacity="0.7"/>
-          <stop offset="55%"  stopColor="#FFD97A" stopOpacity="0.25"/>
+        <radialGradient id="sg" cx="50%" cy="53%" r="42%">
+          <stop offset="0%"   stopColor="#FFE566" stopOpacity="0.85"/>
+          <stop offset="50%"  stopColor="#FFD97A" stopOpacity="0.35"/>
           <stop offset="100%" stopColor="#FFF7E4" stopOpacity="0"/>
         </radialGradient>
-        <filter id="cloudBlur"><feGaussianBlur stdDeviation="4"/></filter>
+        <filter id="cb"><feGaussianBlur stdDeviation="5"/></filter>
       </defs>
 
       {/* Sky */}
-      <rect width="390" height="520" fill="#FFF7E4"/>
+      <rect width="390" height="700" fill="#FFF7E4"/>
 
-      {/* Wide soft sun glow */}
-      <ellipse cx="200" cy="232" rx="160" ry="130" fill="url(#glowA)"/>
+      {/* Clouds — upper left */}
+      <g opacity="0.55" filter="url(#cb)">
+        <ellipse cx="58"  cy="180" rx="46" ry="24" fill="#FFFEF8"/>
+        <ellipse cx="86"  cy="164" rx="36" ry="20" fill="#FFFEF8"/>
+        <ellipse cx="36"  cy="198" rx="30" ry="17" fill="#FFFEF8"/>
+        <ellipse cx="130" cy="195" rx="38" ry="20" fill="#FFFEF8"/>
+        <ellipse cx="158" cy="181" rx="28" ry="16" fill="#FFFEF8"/>
+      </g>
 
-      {/* Long soft sun rays */}
+      {/* Wide sun glow — radiates above the hills */}
+      <ellipse cx={cx} cy={cy} rx="180" ry="150" fill="url(#sg)"/>
+
+      {/* Sun rays — only above horizon (top half) so they peek above hills */}
       {rays.map(a => {
         const rad = (a - 90) * Math.PI / 180;
+        if (Math.sin(rad) > 0.3) return null; // hide rays pointing deep into hills
         return (
           <line key={a}
-            x1={200 + 54 * Math.cos(rad)} y1={232 + 54 * Math.sin(rad)}
-            x2={200 + 155 * Math.cos(rad)} y2={232 + 155 * Math.sin(rad)}
-            stroke="#FFD03A" strokeWidth="2.5" strokeLinecap="round" opacity="0.22"/>
+            x1={cx + (sr + 4) * Math.cos(rad)} y1={cy + (sr + 4) * Math.sin(rad)}
+            x2={cx + 160 * Math.cos(rad)}       y2={cy + 160 * Math.sin(rad)}
+            stroke="#FFD03A" strokeWidth="2.5" strokeLinecap="round" opacity="0.28"/>
         );
       })}
 
-      {/* Sun */}
-      <circle cx="200" cy="232" r="48" fill="#FFD03A"/>
+      {/* Sun circle — drawn BEFORE hills so hills cover the bottom of it */}
+      <circle cx={cx} cy={cy} r={sr} fill="#FFD03A"/>
 
-      {/* Soft clouds — upper left */}
-      <g opacity="0.6" filter="url(#cloudBlur)">
-        <ellipse cx="62"  cy="132" rx="44" ry="22" fill="#FFFDF5"/>
-        <ellipse cx="88"  cy="118" rx="34" ry="18" fill="#FFFDF5"/>
-        <ellipse cx="40"  cy="148" rx="30" ry="16" fill="#FFFDF5"/>
-        <ellipse cx="125" cy="148" rx="36" ry="19" fill="#FFFDF5"/>
-        <ellipse cx="152" cy="136" rx="26" ry="15" fill="#FFFDF5"/>
-      </g>
+      {/* Hill 1 — farthest back, lightest sage — covers lower sun */}
+      <path d="M0,340 C55,315 115,328 180,318 C245,308 300,322 358,312 C374,309 385,313 390,311 L390,700 L0,700 Z" fill="#B0CBA8"/>
 
-      {/* Hill 1 — far back, lightest sage */}
-      <path d="M0,285 C55,262 115,274 180,266 C245,258 300,270 358,262 C372,260 383,263 390,261 L390,520 L0,520 Z" fill="#AECBAA"/>
+      {/* Hill 2 — sage-teal */}
+      <path d="M0,375 C50,350 112,364 172,353 C232,342 285,357 342,346 C364,342 380,347 390,344 L390,700 L0,700 Z" fill="#6DB89C"/>
 
-      {/* Hill 2 — mid-back, sage-teal */}
-      <path d="M0,316 C48,292 108,305 168,296 C228,287 280,300 338,291 C362,287 380,293 390,290 L390,520 L0,520 Z" fill="#6DB89C"/>
+      {/* Hill 3 — teal */}
+      <path d="M0,412 C45,386 102,400 160,389 C218,378 268,394 326,382 C355,376 376,384 390,380 L390,700 L0,700 Z" fill="#3D9E82"/>
 
-      {/* Hill 3 — mid-front, teal */}
-      <path d="M0,348 C42,323 98,336 156,326 C214,316 264,330 320,320 C352,313 376,323 390,318 L390,520 L0,520 Z" fill="#3D9E82"/>
-
-      {/* Hill 4 — front, dark teal */}
-      <path d="M-4,380 C36,354 82,368 132,357 C178,347 218,362 264,351 C310,340 354,356 390,346 L390,520 L-4,520 Z" fill="#2A7870"/>
+      {/* Hill 4 — front, darkest teal */}
+      <path d="M-4,450 C38,422 86,437 138,425 C184,414 225,430 272,418 C318,406 358,422 390,412 L390,700 L-4,700 Z" fill="#2A7870"/>
     </svg>
   );
 }
@@ -703,15 +706,20 @@ export default function SeniorHome() {
 
   // ── Main screen ───────────────────────────────────────────────────────────
   const MainScreen = (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column',
-      padding: 'env(safe-area-inset-top, 60px) 28px env(safe-area-inset-bottom, 28px)',
-      paddingTop: 'max(env(safe-area-inset-top), 60px)',
-      paddingBottom: 'max(env(safe-area-inset-bottom), 28px)' }}>
-      {/* header */}
-      <div style={{ textAlign: 'center' }}>
+    <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column',
+      paddingTop: 'max(env(safe-area-inset-top), 52px)',
+      paddingBottom: 'max(env(safe-area-inset-bottom), 20px)' }}>
+
+      {/* Sunrise landscape covers full main screen */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', zIndex: 0 }}>
+        <SunriseLandscape />
+      </div>
+
+      {/* header — floats over the sky */}
+      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '8px 28px 0' }}>
         <div style={{ fontSize: zf(22), fontWeight: 700, color: '#8a8f8b' }}>{t(lang, 'goodMorning')}</div>
         <div style={{ fontSize: zf(38), fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2 }}>{firstName}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <rect x="3" y="4" width="18" height="18" rx="3" stroke="#aeb2ae" strokeWidth="2"/>
             <path d="M3 9h18" stroke="#aeb2ae" strokeWidth="2"/>
@@ -721,15 +729,10 @@ export default function SeniorHome() {
         </div>
       </div>
 
-      {/* button or already-checked */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-        {/* Sunrise landscape background */}
-        <div style={{ position: 'absolute', inset: 0, borderRadius: 0, overflow: 'hidden', zIndex: 0 }}>
-          <SunriseLandscape />
-        </div>
-
+      {/* button or already-checked — centered in remaining space */}
+      <div style={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         {status?.checked_in ? (
-          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+          <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>☀️</div>
             <div style={{ fontSize: zf(22), fontWeight: 800, color: '#1F9D55' }}>{t(lang, 'allDone')}</div>
             <div style={{ fontSize: zf(16), fontWeight: 700, color: '#aeb2ae', marginTop: 8 }}>
@@ -738,35 +741,33 @@ export default function SeniorHome() {
             <div style={{ fontSize: zf(15), fontWeight: 600, color: '#c4c8c3', marginTop: 4 }}>{t(lang, 'seeTomorrow')}</div>
           </div>
         ) : (
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-            <button
-              onClick={handleCheckin}
-              className={pressing ? 'anim-press' : 'anim-breathe'}
-              style={{
-                width: 240, height: 240, borderRadius: 9999,
-                border: '7px solid rgba(255,255,255,0.65)',
-                cursor: 'pointer', padding: '0 20px', boxSizing: 'border-box',
-                background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 5,
-                color: '#fff', fontFamily: "'Nunito', sans-serif",
-              }}
-              aria-label="Tap to check in for today"
-            >
-              <SunWhite size={44} />
-              <span style={{ fontSize: zf(25), fontWeight: 900, letterSpacing: '0.2px', textAlign: 'center', lineHeight: 1.15, maxWidth: 160 }}>
-                {t(lang, 'buttonLabel')}
-              </span>
-              <span style={{ fontSize: zf(13), fontWeight: 700, opacity: 0.9, letterSpacing: '0.3px', textAlign: 'center', maxWidth: 160 }}>
-                {t(lang, 'buttonSub')}
-              </span>
-            </button>
-          </div>
+          <button
+            onClick={handleCheckin}
+            className={pressing ? 'anim-press' : 'anim-breathe'}
+            style={{
+              width: 240, height: 240, borderRadius: 9999,
+              border: '7px solid rgba(255,255,255,0.65)',
+              cursor: 'pointer', padding: '0 20px', boxSizing: 'border-box',
+              background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 5,
+              color: '#fff', fontFamily: "'Nunito', sans-serif",
+            }}
+            aria-label="Tap to check in for today"
+          >
+            <SunWhite size={44} />
+            <span style={{ fontSize: zf(25), fontWeight: 900, letterSpacing: '0.2px', textAlign: 'center', lineHeight: 1.15, maxWidth: 160 }}>
+              {t(lang, 'buttonLabel')}
+            </span>
+            <span style={{ fontSize: zf(13), fontWeight: 700, opacity: 0.9, letterSpacing: '0.3px', textAlign: 'center', maxWidth: 160 }}>
+              {t(lang, 'buttonSub')}
+            </span>
+          </button>
         )}
       </div>
 
       {/* footer bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '0 28px' }}>
         {status?.checked_in ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 9,
