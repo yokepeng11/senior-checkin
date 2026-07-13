@@ -322,8 +322,7 @@ export default function NOKDashboard() {
               <circle cx="12" cy="17" r="1.4" fill="#fff"/>
             </svg>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#8a6a16', lineHeight: 1.45 }}>
-              <strong>{pendingVisible} senior{pendingVisible > 1 ? 's have' : ' has'} not checked in yet.</strong>{' '}
-              A WhatsApp alert will be sent at 12:00 PM if they remain unchecked.
+              <strong>{pendingVisible} senior{pendingVisible > 1 ? 's have' : ' has'} not checked in yet.</strong>
             </div>
           </div>
         )}
