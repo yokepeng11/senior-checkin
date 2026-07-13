@@ -1,5 +1,5 @@
 // Service Worker for Senior Check-In push notifications
-// v10 — sun peeks behind hills, landscape covers full screen
+// v11 — fix header and button text visibility
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));

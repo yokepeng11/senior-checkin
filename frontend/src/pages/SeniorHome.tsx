@@ -717,15 +717,15 @@ export default function SeniorHome() {
 
       {/* header — floats over the sky */}
       <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: '8px 28px 0' }}>
-        <div style={{ fontSize: zf(22), fontWeight: 700, color: '#8a8f8b' }}>{t(lang, 'goodMorning')}</div>
-        <div style={{ fontSize: zf(38), fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2 }}>{firstName}</div>
+        <div style={{ fontSize: zf(22), fontWeight: 700, color: '#6b7068' }}>{t(lang, 'goodMorning')}</div>
+        <div style={{ fontSize: zf(38), fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2, color: '#1F2421' }}>{firstName}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="18" rx="3" stroke="#aeb2ae" strokeWidth="2"/>
-            <path d="M3 9h18" stroke="#aeb2ae" strokeWidth="2"/>
-            <path d="M8 2v4M16 2v4" stroke="#aeb2ae" strokeWidth="2" strokeLinecap="round"/>
+            <rect x="3" y="4" width="18" height="18" rx="3" stroke="#7a8075" strokeWidth="2"/>
+            <path d="M3 9h18" stroke="#7a8075" strokeWidth="2"/>
+            <path d="M8 2v4M16 2v4" stroke="#7a8075" strokeWidth="2" strokeLinecap="round"/>
           </svg>
-          <span style={{ fontSize: zf(17), fontWeight: 700, color: '#aeb2ae' }}>{fmtDate(lang)}</span>
+          <span style={{ fontSize: zf(17), fontWeight: 700, color: '#7a8075' }}>{fmtDate(lang)}</span>
         </div>
       </div>
 
@@ -747,19 +747,20 @@ export default function SeniorHome() {
             style={{
               width: 240, height: 240, borderRadius: 9999,
               border: '7px solid rgba(255,255,255,0.65)',
-              cursor: 'pointer', padding: '0 20px', boxSizing: 'border-box',
+              cursor: 'pointer', padding: '0 16px', boxSizing: 'border-box',
               background: 'radial-gradient(circle at 50% 36%, #34BE76, #1F9D55 72%)',
               display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 5,
+              alignItems: 'center', justifyContent: 'center', gap: 4,
               color: '#fff', fontFamily: "'Nunito', sans-serif",
+              overflow: 'visible',
             }}
             aria-label="Tap to check in for today"
           >
             <SunWhite size={44} />
-            <span style={{ fontSize: zf(25), fontWeight: 900, letterSpacing: '0.2px', textAlign: 'center', lineHeight: 1.15, maxWidth: 160 }}>
+            <span style={{ fontSize: zf(25), fontWeight: 900, letterSpacing: '0.2px', textAlign: 'center', lineHeight: 1.15, maxWidth: 180, color: '#fff', WebkitTextFillColor: '#fff' }}>
               {t(lang, 'buttonLabel')}
             </span>
-            <span style={{ fontSize: zf(13), fontWeight: 700, opacity: 0.9, letterSpacing: '0.3px', textAlign: 'center', maxWidth: 160 }}>
+            <span style={{ fontSize: zf(13), fontWeight: 700, opacity: 0.9, letterSpacing: '0.3px', textAlign: 'center', maxWidth: 180, color: '#fff', WebkitTextFillColor: '#fff' }}>
               {t(lang, 'buttonSub')}
             </span>
           </button>
