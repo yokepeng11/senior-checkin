@@ -437,7 +437,26 @@ export default function NOKDashboard() {
         )}
       </div>
 
-      <div style={{ textAlign: 'center', padding: '8px 18px 28px' }}>
+      <div style={{ textAlign: 'center', padding: '8px 18px 4px' }}>
+        <button onClick={async () => {
+          const base = import.meta.env.VITE_API_URL ?? '';
+          try {
+            const r = await fetch(`${base}/api/debug/run-alerts?force=1`, { method: 'POST' });
+            const j = await r.json();
+            if (j.skipped) alert('Alerts already sent today. No action needed.');
+            else if (j.missed === 0) alert('✅ All seniors have checked in — no alert needed.');
+            else alert(`⚠️ Alert sent for ${j.seniors?.join(', ') || j.missed + ' senior(s)'}.`);
+          } catch { alert('Could not reach the server. Please try again.'); }
+        }} style={{
+          border: '1.5px solid #e0dcd5', background: 'none', cursor: 'pointer',
+          fontSize: 13, fontWeight: 700, color: '#8a8f8b', borderRadius: 10,
+          padding: '8px 16px', fontFamily: "'Nunito', sans-serif",
+        }}>
+          🔔 Test 12pm alert now
+        </button>
+      </div>
+
+      <div style={{ textAlign: 'center', padding: '4px 18px 28px' }}>
         <button onClick={() => setShowChangeRoleConfirm(true)} style={{
           border: 'none', background: 'none', cursor: 'pointer',
           fontSize: 13, fontWeight: 700, color: '#b5b0a8',
