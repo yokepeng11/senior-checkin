@@ -355,13 +355,6 @@ export default function SeniorDetail() {
             {weekly && <ReportCard report={weekly} label="Weekly (7 days)" />}
             {monthly && <ReportCard report={monthly} label="Monthly (30 days)" />}
 
-            <div style={{ background: '#fff', borderRadius: 22, padding: '18px 20px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.05)', fontSize: 14, fontWeight: 600, color: '#8a857c', lineHeight: 1.55 }}>
-              <div style={{ fontWeight: 800, color: '#1F2421', marginBottom: 6 }}>📧 Automated schedule</div>
-              <div>Weekly reports emailed every <strong>Monday 9:00 AM</strong> → {senior?.person_in_charge_email || '—'}</div>
-              <div style={{ marginTop: 6 }}>Monthly reports on the <strong>1st of each month</strong>.</div>
-              <div style={{ marginTop: 6 }}>SMS alerts at <strong>12:00 PM</strong> if no check-in → {senior?.person_in_charge_phone || '—'}</div>
-            </div>
           </>
         )}
       </div>
