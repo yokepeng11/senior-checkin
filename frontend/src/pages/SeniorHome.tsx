@@ -62,41 +62,60 @@ function SettingsIcon() {
 
 // ── Sunrise landscape illustration (matches the photo) ───────────────────────
 function SunriseLandscape() {
-  const rayAngles = [0,30,60,90,120,150,180,210,240,270,300,330];
+  const rays = Array.from({ length: 16 }, (_, i) => i * (360 / 16));
   return (
     <svg width="100%" height="100%" viewBox="0 0 390 520"
       preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"
       style={{ display: 'block' }}>
       <defs>
-        <radialGradient id="sunGlow" cx="50%" cy="44%" r="40%">
-          <stop offset="0%"   stopColor="#FFE566" stopOpacity="0.75"/>
+        <radialGradient id="glowA" cx="52%" cy="46%" r="45%">
+          <stop offset="0%"   stopColor="#FFE566" stopOpacity="0.7"/>
+          <stop offset="55%"  stopColor="#FFD97A" stopOpacity="0.25"/>
           <stop offset="100%" stopColor="#FFF7E4" stopOpacity="0"/>
         </radialGradient>
+        <filter id="cloudBlur"><feGaussianBlur stdDeviation="4"/></filter>
       </defs>
+
       {/* Sky */}
       <rect width="390" height="520" fill="#FFF7E4"/>
-      {/* Sun glow halo */}
-      <ellipse cx="195" cy="228" rx="130" ry="110" fill="url(#sunGlow)"/>
-      {/* Sun rays */}
-      {rayAngles.map(a => {
-        const r = (a - 90) * Math.PI / 180;
+
+      {/* Wide soft sun glow */}
+      <ellipse cx="200" cy="232" rx="160" ry="130" fill="url(#glowA)"/>
+
+      {/* Long soft sun rays */}
+      {rays.map(a => {
+        const rad = (a - 90) * Math.PI / 180;
         return (
           <line key={a}
-            x1={195 + 50 * Math.cos(r)} y1={228 + 50 * Math.sin(r)}
-            x2={195 + 98 * Math.cos(r)} y2={228 + 98 * Math.sin(r)}
-            stroke="#FFD447" strokeWidth="3" strokeLinecap="round" opacity="0.55"/>
+            x1={200 + 54 * Math.cos(rad)} y1={232 + 54 * Math.sin(rad)}
+            x2={200 + 155 * Math.cos(rad)} y2={232 + 155 * Math.sin(rad)}
+            stroke="#FFD03A" strokeWidth="2.5" strokeLinecap="round" opacity="0.22"/>
         );
       })}
+
       {/* Sun */}
-      <circle cx="195" cy="228" r="42" fill="#FFD447"/>
-      {/* Hill layer 1 — farthest, lightest sage */}
-      <path d="M0,292 C50,272 110,282 165,276 C220,270 270,280 325,273 C355,269 375,276 390,273 L390,520 L0,520 Z" fill="#B2D4AE"/>
-      {/* Hill layer 2 — medium teal-green */}
-      <path d="M0,322 C45,300 100,312 158,304 C215,296 265,308 320,300 C352,295 374,302 390,298 L390,520 L0,520 Z" fill="#72B896"/>
-      {/* Hill layer 3 — mid green */}
-      <path d="M0,352 C40,330 92,342 148,333 C205,324 255,338 308,328 C345,320 372,332 390,326 L390,520 L0,520 Z" fill="#3FA07E"/>
-      {/* Hill layer 4 — front, darkest teal */}
-      <path d="M-5,382 C32,358 78,370 128,360 C173,351 210,366 258,355 C303,344 348,360 390,350 L390,520 L-5,520 Z" fill="#2A7868"/>
+      <circle cx="200" cy="232" r="48" fill="#FFD03A"/>
+
+      {/* Soft clouds — upper left */}
+      <g opacity="0.6" filter="url(#cloudBlur)">
+        <ellipse cx="62"  cy="132" rx="44" ry="22" fill="#FFFDF5"/>
+        <ellipse cx="88"  cy="118" rx="34" ry="18" fill="#FFFDF5"/>
+        <ellipse cx="40"  cy="148" rx="30" ry="16" fill="#FFFDF5"/>
+        <ellipse cx="125" cy="148" rx="36" ry="19" fill="#FFFDF5"/>
+        <ellipse cx="152" cy="136" rx="26" ry="15" fill="#FFFDF5"/>
+      </g>
+
+      {/* Hill 1 — far back, lightest sage */}
+      <path d="M0,285 C55,262 115,274 180,266 C245,258 300,270 358,262 C372,260 383,263 390,261 L390,520 L0,520 Z" fill="#AECBAA"/>
+
+      {/* Hill 2 — mid-back, sage-teal */}
+      <path d="M0,316 C48,292 108,305 168,296 C228,287 280,300 338,291 C362,287 380,293 390,290 L390,520 L0,520 Z" fill="#6DB89C"/>
+
+      {/* Hill 3 — mid-front, teal */}
+      <path d="M0,348 C42,323 98,336 156,326 C214,316 264,330 320,320 C352,313 376,323 390,318 L390,520 L0,520 Z" fill="#3D9E82"/>
+
+      {/* Hill 4 — front, dark teal */}
+      <path d="M-4,380 C36,354 82,368 132,357 C178,347 218,362 264,351 C310,340 354,356 390,346 L390,520 L-4,520 Z" fill="#2A7870"/>
     </svg>
   );
 }
@@ -692,7 +711,14 @@ export default function SeniorHome() {
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: zf(22), fontWeight: 700, color: '#8a8f8b' }}>{t(lang, 'goodMorning')}</div>
         <div style={{ fontSize: zf(38), fontWeight: 900, letterSpacing: '-0.8px', marginTop: 2 }}>{firstName}</div>
-        <div style={{ fontSize: zf(17), fontWeight: 700, color: '#aeb2ae', marginTop: 12 }}>{fmtDate(lang)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="4" width="18" height="18" rx="3" stroke="#aeb2ae" strokeWidth="2"/>
+            <path d="M3 9h18" stroke="#aeb2ae" strokeWidth="2"/>
+            <path d="M8 2v4M16 2v4" stroke="#aeb2ae" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <span style={{ fontSize: zf(17), fontWeight: 700, color: '#aeb2ae' }}>{fmtDate(lang)}</span>
+        </div>
       </div>
 
       {/* button or already-checked */}
