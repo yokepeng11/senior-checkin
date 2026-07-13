@@ -4,8 +4,8 @@
   "description": "Daily check-in for seniors — stay connected with your loved ones",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#e7e5df",
-  "theme_color": "#1F9D55",
+  "background_color": "#FFF7E4",
+  "theme_color": "#FFF7E4",
   "orientation": "portrait",
   "icons": [
     {

@@ -731,7 +731,7 @@ export default function SeniorHome() {
   );
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#F4F6F4',
+    <div style={{ minHeight: '100dvh', background: '#FFF7E4',
       fontFamily: "'Nunito', sans-serif", WebkitFontSmoothing: 'antialiased',
       display: 'flex', flexDirection: 'column' }}>
       {screen === 'confirm' && ConfirmScreen}
