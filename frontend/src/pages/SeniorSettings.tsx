@@ -17,12 +17,6 @@ export default function SeniorSettings() {
   const [form, setForm] = useState({
     preferred_checkin_time: '09:00',
     phone_number: '',
-    person_in_charge_name: '',
-    person_in_charge_phone: '',
-    person_in_charge_email: '',
-    nok_name: '',
-    next_of_kin_phone: '',
-    next_of_kin_email: '',
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -34,12 +28,6 @@ export default function SeniorSettings() {
       setForm({
         preferred_checkin_time: s.preferred_checkin_time || '09:00',
         phone_number: s.phone_number || '',
-        person_in_charge_name: s.person_in_charge_name || '',
-        person_in_charge_phone: s.person_in_charge_phone || '',
-        person_in_charge_email: s.person_in_charge_email || '',
-        nok_name: s.nok_name || '',
-        next_of_kin_phone: s.next_of_kin_phone || '',
-        next_of_kin_email: s.next_of_kin_email || '',
       });
     });
   }, [id]);
@@ -115,32 +103,11 @@ export default function SeniorSettings() {
         </div>
 
         {/* Phone */}
-        <div className="senior-card mb-5">
+        <div className="senior-card mb-8">
           <h2 className="text-lg font-bold text-gray-700 mb-4">📱 My Phone Number</h2>
           {field('Phone number', 'phone_number', 'tel', 'Format: +65 1234 5678')}
         </div>
 
-        {/* Person in charge */}
-        <div className="senior-card mb-5">
-          <h2 className="text-lg font-bold text-gray-700 mb-4">👤 Person-in-Charge</h2>
-          <p className="text-gray-400 text-sm mb-4">
-            This person will receive SMS alerts if you do not check in by 12 PM, and weekly/monthly reports by email.
-          </p>
-          {field('Name', 'person_in_charge_name')}
-          {field('Phone (for SMS alerts)', 'person_in_charge_phone', 'tel')}
-          {field('Email (for reports)', 'person_in_charge_email', 'email')}
-        </div>
-
-        {/* NOK */}
-        <div className="senior-card mb-8">
-          <h2 className="text-lg font-bold text-gray-700 mb-4">🏠 Next of Kin (Backup)</h2>
-          <p className="text-gray-400 text-sm mb-4">
-            Used as backup if the person-in-charge is unavailable.
-          </p>
-          {field('Name', 'nok_name')}
-          {field('Phone', 'next_of_kin_phone', 'tel')}
-          {field('Email', 'next_of_kin_email', 'email')}
-        </div>
       </div>
 
       {/* Save button */}
