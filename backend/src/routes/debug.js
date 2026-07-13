@@ -209,7 +209,7 @@ router.post('/run-alerts', async (req, res) => {
 
     for (const caregiverId of Object.keys(caregiverGroups)) {
       const group = caregiverGroups[caregiverId];
-      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(caregiverId);
+      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ? OR device_id = ?').all(caregiverId, caregiverId);
       if (subs.length === 0) continue;
       const names = group.map(function(s) { return s.name; }).join(', ');
       for (const sub of subs) {

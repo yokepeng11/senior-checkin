@@ -148,7 +148,7 @@ function scheduleSMSAlerts() {
     }
 
     for (const [caregiverId, group] of Object.entries(byCaregiver)) {
-      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ?').all(caregiverId);
+      const subs = db.prepare('SELECT * FROM caregiver_push_subscriptions WHERE phone = ? OR device_id = ?').all(caregiverId, caregiverId);
       if (subs.length === 0) continue;
       const names = group.map(s => s.name).join(', ');
       console.log(`\n🔔 Pushing to caregiver ${caregiverId} — ${names}`);

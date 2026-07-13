@@ -6,8 +6,13 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'https://senior-checkin-omega.vercel.app',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+]);
 app.use(cors({
-  origin: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL, 'http://localhost:5173'] : true,
+  origin: (origin, cb) => cb(null, !origin || allowedOrigins.has(origin) ? true : false),
   credentials: true,
 }));
 app.use(express.json());
