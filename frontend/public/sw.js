@@ -1,5 +1,5 @@
 // Service Worker for Senior Check-In push notifications
-// v5 — change role confirmation modal
+// v6 — black-translucent status bar
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
