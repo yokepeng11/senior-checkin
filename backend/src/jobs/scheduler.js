@@ -89,12 +89,19 @@ function scheduleDailyReset() {
 }
 
 function scheduleSMSAlerts() {
-  // Disabled — alerts are now triggered externally via cron-job.org
-  // hitting POST /api/debug/run-alerts to avoid duplicates on Render free tier
-  return;
-  cron.schedule('0 4 * * *', async () => {   // 04:00 UTC = 12:00 SGT
+  // Runs at 04:00 UTC = 12:00 SGT every day
+  cron.schedule('0 4 * * *', async () => {
     const today = new Date(Date.now() + 8 * 3600000).toISOString().split('T')[0];
     console.log(`\n⏰ 12pm SGT alert check for ${today}`);
+
+    // Dedup: skip if alert was already sent today (prevents double-fire from cron-job.org)
+    const alreadySent = db.prepare(
+      "SELECT 1 FROM alert_log WHERE alert_date = ? AND alert_type IN ('push','whatsapp') LIMIT 1"
+    ).get(today);
+    if (alreadySent) {
+      console.log(`✅ Alerts already sent for ${today} — skipping.`);
+      return;
+    }
 
     const missed = db.prepare(`
       SELECT s.* FROM seniors s

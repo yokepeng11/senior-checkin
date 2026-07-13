@@ -109,7 +109,18 @@ router.post('/test-whatsapp', async (req, res) => {
 // ── POST /api/debug/run-alerts ────────────────────────────────────────────────
 router.post('/run-alerts', async (req, res) => {
   const today = new Date(Date.now() + 8 * 3600000).toISOString().split('T')[0];
-  console.log(`\n⏰ Manual alert trigger for ${today}`);
+  const force = req.query.force === '1'; // ?force=1 bypasses dedup (for testing)
+  console.log(`\n⏰ Alert trigger for ${today}${force ? ' (forced)' : ''}`);
+
+  // Dedup: prevent double-sending if cron-job.org and internal cron both fire
+  if (!force) {
+    const alreadySent = db.prepare(
+      "SELECT 1 FROM alert_log WHERE alert_date = ? AND alert_type IN ('push','whatsapp') LIMIT 1"
+    ).get(today);
+    if (alreadySent) {
+      return res.json({ ok: true, message: `Alerts already sent for ${today} — skipped. Use ?force=1 to override.`, skipped: true });
+    }
+  }
 
   const missed = db.prepare(`
     SELECT s.* FROM seniors s
